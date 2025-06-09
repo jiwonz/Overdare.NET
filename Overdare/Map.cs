@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Overdare.UScriptClass;
-using System.Reflection.Emit;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.PropertyTypes.Objects;
@@ -118,10 +117,44 @@ namespace Overdare
                 UpdateList[i] = next;
                 next++;
             }
-            FPackageIndexUpdater updater = new(UpdateList, Asset);
+            KillResult killResult = new();
+            FPackageIndexUpdater updater = new(UpdateList, Asset, killResult);
             Console.WriteLine(JsonConvert.SerializeObject(UpdateList, Formatting.Indented));
-            //Console.WriteLine(Asset.Exports.Count);
+            //JToken.FromObject(Asset, updater.Serializer);
+            for (int i = 0; i < Asset.Exports.Count; i++)
+            {
+                killResult.Value = false;
+                JToken.FromObject(Asset.Exports[i], updater.Serializer);
+                if (killResult.Value)
+                {
+                    //DestroyedExportsIndexes.Add(i);
+                    Console.WriteLine($"bonus killed2 {i}");
+                }
+            }
+            for (int i = 0; i < Asset.Exports.Count; i++)
+            {
+                killResult.Value = false;
+                JToken.FromObject(Asset.Exports[i], updater.Serializer);
+                if (killResult.Value)
+                {
+                    DestroyedExportsIndexes.Add(i);
+                    Console.WriteLine($"bonus killed {i}");
+                }
+            }
+            next = 0;
+            for (int i = 0; i < Asset.Exports.Count; i++)
+            {
+                if (DestroyedExportsIndexes.Contains(i))
+                {
+                    UpdateList[i] = null;
+                    continue;
+                }
+                UpdateList[i] = next;
+                next++;
+            }
+            Console.WriteLine(JsonConvert.SerializeObject(UpdateList, Formatting.Indented));
             JToken.FromObject(Asset, updater.Serializer);
+
             for (int i = _level.Actors.Count - 1; i >= 0; i--)
             {
                 var actorPackageIndex = _level.Actors[i];

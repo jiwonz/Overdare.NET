@@ -1,7 +1,5 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using System.Diagnostics;
 using UAssetAPI;
 using UAssetAPI.JSON;
 using UAssetAPI.UnrealTypes;
@@ -12,12 +10,12 @@ namespace Overdare
     {
         public JsonSerializer Serializer;
 
-        public FPackageIndexUpdater(int?[] updateMap, UAsset asset)
+        public FPackageIndexUpdater(int?[] updateMap, UAsset asset, KillResult killResult)
         {
             Dictionary<FName, string> toBeFilled = new Dictionary<FName, string>();
             Serializer = JsonSerializer.Create(new JsonSerializerSettings
             {
-                ContractResolver = new OverrideFPackageIndexResolver(toBeFilled, asset, updateMap),
+                ContractResolver = new OverrideFPackageIndexResolver(toBeFilled, asset, updateMap, killResult),
                 TypeNameHandling = TypeNameHandling.None,
                 NullValueHandling = NullValueHandling.Ignore,
                 Formatting = Formatting.None,
@@ -44,12 +42,17 @@ namespace Overdare
             });
         }
     }
-        
 
-    public class CustomFPackageIndexJsonConverter : JsonConverter
+    internal class KillResult
+    {
+        public bool Value = false;
+    }
+
+    internal class CustomFPackageIndexJsonConverter : JsonConverter
     {
         public UAsset CurrentAsset;
         public int?[] UpdateMap;
+        public KillResult KillResult;
 
         public override bool CanConvert(Type objectType)
         {
@@ -65,9 +68,15 @@ namespace Overdare
                 //Console.WriteLine(UpdateMap.Length);
                 //Console.WriteLine(pindex.ToExport(CurrentAsset) == CurrentAsset.Exports[118]);
                 //Console.WriteLine(pindex.Index - 1);
-                Console.WriteLine($"{pindex.Index - 1} is {UpdateMap[pindex.Index - 1] ?? 0}");
+                //Console.WriteLine($"{pindex.Index - 1} is {UpdateMap[pindex.Index - 1] ?? 0}");
                 //Console.WriteLine("AAA");
+                var indexToKill = pindex.Index - 1;
                 pindex.Index = UpdateMap[pindex.Index - 1] + 1 ?? 0;
+                if (pindex.IsNull())
+                {
+                    Console.WriteLine($"Index {indexToKill} was killed now index: {pindex.Index}");
+                    KillResult.Value = true;
+                }
             }
             writer.WriteNull();
         }
@@ -83,24 +92,26 @@ namespace Overdare
             return new FPackageIndex(Convert.ToInt32(reader.Value));
         }
 
-        public CustomFPackageIndexJsonConverter(UAsset asset, int?[] updateMap) : base()
+        public CustomFPackageIndexJsonConverter(UAsset asset, int?[] updateMap, KillResult killResult) : base()
         {
             CurrentAsset = asset;
             UpdateMap = updateMap;
+            KillResult = killResult;
         }
     }
 
-    public class OverrideFPackageIndexResolver : DefaultContractResolver
+    internal class OverrideFPackageIndexResolver : DefaultContractResolver
     {
         public UAsset CurrentAsset;
         public int?[] UpdateMap;
+        public KillResult KillResult;
 
         protected override JsonContract CreateContract(Type objectType)
         {
             JsonContract contract = base.CreateContract(objectType);
             if (objectType == typeof(FPackageIndex))
             {
-                contract.Converter = new CustomFPackageIndexJsonConverter(CurrentAsset, UpdateMap);
+                contract.Converter = new CustomFPackageIndexJsonConverter(CurrentAsset, UpdateMap, KillResult);
             }
             return contract;
         }
@@ -116,11 +127,12 @@ namespace Overdare
             return base.ResolveContractConverter(objectType);
         }
 
-        public OverrideFPackageIndexResolver(Dictionary<FName, string> toBeFilled, UAsset currentAsset, int?[] updateMap) : base()
+        public OverrideFPackageIndexResolver(Dictionary<FName, string> toBeFilled, UAsset currentAsset, int?[] updateMap, KillResult killResult) : base()
         {
             ToBeFilled = toBeFilled;
             CurrentAsset = currentAsset;
             UpdateMap = updateMap;
+            KillResult = killResult;
         }
     }
 }

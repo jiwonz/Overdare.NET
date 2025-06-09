@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using Overdare.UScriptClass;
+﻿using Overdare.UScriptClass;
 
 namespace Overdare
 {

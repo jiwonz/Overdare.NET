@@ -7,8 +7,10 @@ namespace Overdare.UScriptClass
     {
         internal FName? RawName;
         internal Map? RawMap;
-        public Map Map {
-            get {
+        public Map Map
+        {
+            get
+            {
                 if (RawMap == null) throw new InvalidOperationException("Map is not set for this LuaInstance.");
                 return RawMap;
             }
@@ -165,7 +167,18 @@ namespace Overdare.UScriptClass
         {
             Parent = null;
             if (ExportReference != null)
+            {
                 Map.DestroyedExportsIndexes.Add(ExportReference.NormalExportIndex);
+                var packageIndex = ExportReference.ToPackageIndex();
+                for (int i = 0; i < Map.Asset.Exports.Count; i++)
+                {
+                    if (Map.Asset.Exports[i].OuterIndex.Index == packageIndex.Index)
+                    {
+                        Console.WriteLine("You died too");
+                        Map.DestroyedExportsIndexes.Add(i);
+                    }
+                }
+            }
             //_destroyed = true;
             while (_children.Count != 0)
             {

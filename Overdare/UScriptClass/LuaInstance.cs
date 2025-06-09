@@ -5,7 +5,14 @@ namespace Overdare.UScriptClass
 {
     public class LuaInstance
     {
-        public FName? Name;
+        internal FName? RawName;
+        internal Map? RawMap;
+        public Map Map {
+            get {
+                if (RawMap == null) throw new InvalidOperationException("Map is not set for this LuaInstance.");
+                return RawMap;
+            }
+        }
         // TO-DO: This can be improved by adding a default Export like LuaModel or something.
         public ObjectReference? ExportReference;
         /// <summary>
@@ -30,10 +37,11 @@ namespace Overdare.UScriptClass
                 _parent?._children.Remove(this);
                 value?._children.Add(this);
                 _parent = value;
+                if (value?.RawMap != null) RawMap = value.RawMap;
             }
         }
         private readonly HashSet<LuaInstance> _children = [];
-        internal bool _destroyed = false;
+        //internal bool _destroyed = false;
 
         // Not public because It is not normal case to create LuaInstance without ExportReference
         internal LuaInstance()
@@ -57,26 +65,30 @@ namespace Overdare.UScriptClass
             var asset = map.Asset;
             if (ExportReference != null)
             {
-                if (_destroyed)
-                {
-                    map.ParsedExportsIndexMap[ExportReference.NormalExportIndex] = null;
-                    return;
-                }
+                //if (_destroyed)
+                //{
+                //    map.DestroyedExportsIndexes.Add(ExportReference.NormalExportIndex);
+                //    foreach (var child in _children)
+                //    {
+                //        child.Save(map, ExportReference);
+                //    }
+                //    return;
+                //}
 
                 var export = ExportReference.ToExport(asset);
                 // Apply properties Name(ObjectName, Name, ActorName) and Parent (LuaChildren is set later because we need ExportReference which can be set after their .Save() method called)
-                if (Name != null)
+                if (RawName != null)
                 {
-                    export.ObjectName = Name;
+                    export.ObjectName = RawName;
                     export["Name"] = new StrPropertyData()
                     {
                         Name = FName.FromString(asset, "Name"),
-                        Value = Name.Value,
+                        Value = RawName.Value,
                     };
                     export["ActorLabel"] = new StrPropertyData()
                     {
                         Name = FName.FromString(asset, "ActorLabel"),
-                        Value = Name.Value,
+                        Value = RawName.Value,
                     };
                 }
                 if (parentObjRef != null)
@@ -151,7 +163,15 @@ namespace Overdare.UScriptClass
 
         public void Destroy()
         {
-            _destroyed = true;
+            Parent = null;
+            if (ExportReference != null)
+                Map.DestroyedExportsIndexes.Add(ExportReference.NormalExportIndex);
+            //_destroyed = true;
+            while (_children.Count != 0)
+            {
+                var child = _children.First();
+                child.Destroy();
+            }
         }
 
         public string GetClassName(Map map)
@@ -164,19 +184,32 @@ namespace Overdare.UScriptClass
         }
 
         // Get Instance name or from ExportReference if it is not set.
-        public string GetName(Map map)
+        public string Name
         {
-            if (ExportReference == null) throw new InvalidOperationException("ExportReference is null, cannot determine name.");
-            var export = ExportReference.ToExport(map.Asset);
-            if (export.ObjectName.Value == null) throw new InvalidOperationException("Export ObjectName is null.");
-            return Name?.Value.Value ?? export.ObjectName.Value.Value;
+            get
+            {
+                if (RawName != null) return RawName.Value.Value; // If Name is set, return it.
+                if (ExportReference == null) throw new InvalidOperationException("ExportReference is null, cannot determine name.");
+                var export = ExportReference.ToExport(Map.Asset);
+                if (export.ObjectName.Value == null) throw new InvalidOperationException("Export ObjectName is null.");
+                return RawName?.Value.Value ?? export.ObjectName.Value.Value;
+            }
+            set
+            {
+                if (value == null)
+                {
+                    RawName = null;
+                    return;
+                }
+                RawName = Map.GetNextName(value);
+            }
         }
 
-        public LuaInstance? FindFirstChild(Map map, string name)
+        public LuaInstance? FindFirstChild(string name)
         {
             foreach (var child in GetChildren())
             {
-                if (child.GetName(map) == name)
+                if (child.Name == name)
                 {
                     return child;
                 }
@@ -184,11 +217,11 @@ namespace Overdare.UScriptClass
             return null;
         }
 
-        public LuaInstance? FindFirstChildOfClass(Map map, string className)
+        public LuaInstance? FindFirstChildOfClass(string className)
         {
             foreach (var child in GetChildren())
             {
-                if (child.GetClassName(map) == className)
+                if (child.GetClassName(Map) == className)
                 {
                     return child;
                 }

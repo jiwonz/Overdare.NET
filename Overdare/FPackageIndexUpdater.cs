@@ -58,12 +58,17 @@ namespace Overdare
 
         public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
         {
+            //if (value is FPackageIndex yindex) Console.WriteLine(yindex.Index);
             if (value is FPackageIndex pindex && pindex.IsExport())
             {
+                //Console.WriteLine("AAA");
+                //Console.WriteLine(UpdateMap.Length);
+                //Console.WriteLine(pindex.ToExport(CurrentAsset) == CurrentAsset.Exports[118]);
+                //Console.WriteLine(pindex.Index - 1);
+                Console.WriteLine($"{pindex.Index - 1} is {UpdateMap[pindex.Index - 1] ?? 0}");
+                //Console.WriteLine("AAA");
                 pindex.Index = UpdateMap[pindex.Index - 1] + 1 ?? 0;
             }
-            //writer.WriteValue((value as FPackageIndex).Index);
-            //writer.WriteValue(0);
             writer.WriteNull();
         }
 

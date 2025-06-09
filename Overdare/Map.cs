@@ -1,4 +1,6 @@
-﻿using Overdare.UScriptClass;
+﻿using Newtonsoft.Json.Linq;
+using Overdare.UScriptClass;
+using System.Reflection.Emit;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.PropertyTypes.Objects;
@@ -13,19 +15,20 @@ namespace Overdare
         internal int?[] ParsedExportsIndexMap;
         internal int LevelPackageIndex;
         private LevelExport _level;
+        private FPackageIndexUpdater PackageIndexUpdater;
 
         private LuaInstance? TryLoadLuaDataModel()
         {
             foreach (var actorPackageIndex in _level.Actors)
             {
-                if (!actorPackageIndex.IsExport()) continue;
-                var actorExport = actorPackageIndex.ToExport(Asset);
-                if (actorExport is not NormalExport normalExport) continue;
+                var objRef = ObjectReference.TryFromPackageIndex(Asset, actorPackageIndex);
+                if (objRef == null) continue;
+                var normalExport = objRef.ToExport(Asset);
                 var classType = normalExport.GetExportClassType();
                 if (classType == null) continue;
                 var classTypeName = classType.Value;
                 if (classTypeName == null) continue;
-                if (classTypeName.Value == "LuaDataModel") return NormalExportToLuaInstance(normalExport);
+                if (classTypeName.Value == "LuaDataModel") return LoadIntoLuaInstance(objRef);
             }
             return null;
         }
@@ -35,27 +38,27 @@ namespace Overdare
         /// Especially useful for LuaDataModel exports from UAsset.
         /// </summary>
         /// <param name="export"></param>
-        private LuaInstance NormalExportToLuaInstance(NormalExport export)
+        private LuaInstance LoadIntoLuaInstance(ObjectReference objRef)
         {
+            var export = objRef.ToExport(Asset);
             var classType = export.GetExportClassType();
             if (classType == null) throw new Exception("Export does not have a class type.");
             var classTypeName = classType.Value;
             if (classTypeName == null) throw new Exception("Export class type name is null.");
 
-            var luaInstance = LuaInstance.TryCreateFromClassName(classTypeName.Value) ?? new LuaInstance(export);
-            luaInstance.Name = export["Name"] is StrPropertyData strProp ? strProp.Value.Value : null;
+            var luaInstance = new LuaInstance(objRef);
+            //luaInstance.Name = export["Name"] is StrPropertyData strProp && export.ObjectName.Value.Value == strProp.Value.Value ? strProp.Value.Value : null;
+            luaInstance.Name = export["Name"] is StrPropertyData strProp ? export.ObjectName : null;
 
             if (export["LuaChildren"] is ArrayPropertyData childrenArr)
             {
                 foreach (var child in childrenArr.Value)
                 {
-                    if (child is not ObjectPropertyData objProp || !objProp.Value.IsExport()) continue;
-                    var childExport = objProp.Value.ToExport(export.Asset);
-                    if (childExport is not NormalExport childNormalExport) continue;
-                    var childInstance = NormalExportToLuaInstance(childNormalExport);
-                    childInstance._savedExportIndex = objProp.Value;
+                    if (child is not ObjectPropertyData objProp) continue;
+                    var childObjRef = ObjectReference.TryFromPackageIndex(Asset, objProp.Value);
+                    if (childObjRef == null) continue;
+                    var childInstance = LoadIntoLuaInstance(childObjRef);
                     childInstance.Parent = luaInstance;
-                    ParsedExportsIndexMap[objProp.Value.Index - 1] = null;
                 }
             }
 
@@ -99,6 +102,8 @@ namespace Overdare
                     level.Actors.RemoveAt(i);
                 }
             }
+
+            PackageIndexUpdater = new(ParsedExportsIndexMap, Asset);
         }
 
         public static Map Open(string path)
@@ -112,22 +117,28 @@ namespace Overdare
             LuaDataModel.Save(this, null);
 
             // TO-DO: Update every FPackageIndex and normalize the exports.
+            int next = 0;
+            for (int i = 0; i < ParsedExportsIndexMap.Length; i++)
+            {
+                var value = ParsedExportsIndexMap[i];
+                if (value == null) continue;
+                ParsedExportsIndexMap[i] = next;
+                next++;
+            }
+            JToken.FromObject(Asset, PackageIndexUpdater.Serializer);
+            for (int i = _level.Actors.Count - 1; i >= 0; i--)
+            {
+                var actorPackageIndex = _level.Actors[i];
+                if (!actorPackageIndex.IsExport()) continue;
+                if (actorPackageIndex.Index - 1 >= ParsedExportsIndexMap.Length) continue;
+                if (ParsedExportsIndexMap[actorPackageIndex.Index - 1] == null)
+                {
+                    _level.Actors.RemoveAt(i);
+                }
+            }
 
             Asset.Write(path);
         }
-
-        internal FPackageIndex AddActor(FPackageIndex exportObject)
-        {
-            if (!exportObject.IsExport())
-            {
-                throw new ArgumentException("Export object cannot be null.", nameof(exportObject));
-            }
-            var parentPackageIndex = FPackageIndex.FromExport(Asset.Exports.Count);
-            Asset.Exports.Add(exportObject.ToExport(Asset));
-            _level.Actors.Add(exportObject);
-            return parentPackageIndex;
-        }
-
         internal FPackageIndex AddActor(NormalExport export)
         {
             var parentPackageIndex = FPackageIndex.FromExport(Asset.Exports.Count);

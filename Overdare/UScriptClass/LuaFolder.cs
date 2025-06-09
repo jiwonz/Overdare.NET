@@ -12,7 +12,7 @@ namespace Overdare.UScriptClass
 
         }
 
-        internal override void Save(Map map, FPackageIndex parentPackageIndex)
+        internal override void Save(Map map, ObjectReference? parentObjRef)
         {
             var asset = map.Asset;
 
@@ -30,7 +30,7 @@ namespace Overdare.UScriptClass
                 bNotAlwaysLoadedForEditorGame = true,
                 Data = []
             };
-            FName luaFolderName = Utility.GetNextName(asset, "LuaFolder");
+            var luaFolderName = Utility.GetNextName(asset, "LuaFolder");
             NormalExport luaFolder = new(asset, [0, 0, 0, 0])
             {
                 ClassIndex = new(asset.SearchForImport(new FName(asset, "LuaFolder"))),
@@ -68,10 +68,10 @@ namespace Overdare.UScriptClass
                     }
                 }
             },
-            parentPackageIndex != null ? new ObjectPropertyData()
+            parentObjRef != null ? new ObjectPropertyData()
             {
                 Name = FName.FromString(asset, "Parent"),
-                Value = parentPackageIndex
+                Value = parentObjRef.ToPackageIndex()
             } : null,
             new ObjectPropertyData()
             {
@@ -90,8 +90,10 @@ namespace Overdare.UScriptClass
             },
         ]
             };
-            map.AddActor()
-            base.Save(map, parentPackageIndex);
+            map.Asset.Exports.Add(rootComponent);
+            map.AddActor(luaFolder);
+            ExportReference = new ObjectReference(asset, luaFolderIndex);
+            base.Save(map, parentObjRef);
         }
     }
 }

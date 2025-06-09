@@ -116,7 +116,7 @@ namespace Overdare
         {
             LuaDataModel.Save(this, null);
 
-            // TO-DO: Update every FPackageIndex and normalize the exports.
+            // Update every FPackageIndex and normalize the exports.
             int next = 0;
             for (int i = 0; i < ParsedExportsIndexMap.Length; i++)
             {

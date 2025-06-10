@@ -10,7 +10,7 @@ namespace Overdare
     {
         internal readonly UAsset Asset;
         public LuaInstance LuaDataModel;
-        internal HashSet<int> UnlinkedExportsIndexes = new();
+        internal Dictionary<int, LuaInstance> UnlinkedExportsAndInstances = new();
         internal int LevelPackageIndex;
         private LevelExport _level;
 
@@ -95,11 +95,17 @@ namespace Overdare
         public void Save(string path)
         {
             LuaDataModel.Save(null);
+            foreach (var kv in UnlinkedExportsAndInstances)
+            {
+                kv.Value.Unlink();
+            }
             for (int i = _level.Actors.Count - 1; i >= 0; i--)
             {
                 var actorPackageIndex = _level.Actors[i];
-                if (UnlinkedExportsIndexes.Contains(i)) _level.Actors.RemoveAt(i);
+                if (!actorPackageIndex.IsExport()) continue;
+                if (UnlinkedExportsAndInstances.ContainsKey(actorPackageIndex.Index - 1)) _level.Actors.RemoveAt(i);
             }
+            Asset.Write(path);
         }
 
         //public void Save(string path)

@@ -107,6 +107,8 @@ namespace Overdare.UScriptClass
 
             RootComponent = new(asset, rootComponentIndex);
             SavingActor = new(asset, luaFolderIndex);
+
+            base.Save(parentExportIndex);
         }
 
         public LuaFolder(LoadedActor loadedActor) : base(loadedActor)

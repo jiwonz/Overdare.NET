@@ -1,4 +1,5 @@
-﻿using UAssetAPI;
+﻿using Overdare.UScriptClass;
+using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.UnrealTypes;
 
@@ -49,9 +50,9 @@ namespace Overdare
             LinkedMap = map;
         }
 
-        public void Unlink()
+        public void Unlink(LuaInstance instance)
         {
-            LinkedMap.UnlinkedExportsIndexes.Add(ExportIndex);
+            LinkedMap.UnlinkedExportsAndInstances.Add(ExportIndex, instance);
         }
     }
 }

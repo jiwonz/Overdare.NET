@@ -10,10 +10,15 @@ namespace Overdare
             var map = Map.Open("input.umap");
             Console.WriteLine(JsonConvert.SerializeObject(map.LuaDataModel.GetDescendants().Select(x => x.ClassName), Formatting.Indented));
             var workspace = map.LuaDataModel.FindFirstChildOfClass("LuaWorkspace");
-            var folder = workspace?.FindFirstChild("LuaFolder");
+            var folder = workspace?.FindFirstChildOfClass("LuaFolder");
             Console.WriteLine($"folder: {folder}");
             folder?.Destroy();
             LuaFolder newFolder = new()
+            {
+                Parent = workspace,
+                Name = "NewFolder"
+            };
+            LuaFolder newFolder2 = new()
             {
                 Parent = workspace,
                 Name = "NewFolder"

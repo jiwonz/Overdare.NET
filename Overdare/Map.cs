@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Overdare.UScriptClass;
+﻿using Overdare.UScriptClass;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.PropertyTypes.Objects;
@@ -12,7 +10,7 @@ namespace Overdare
     {
         internal readonly UAsset Asset;
         public LuaInstance LuaDataModel;
-        internal HashSet<int> DestroyedExportsIndexes = new();
+        internal HashSet<int> UnlinkedExportsIndexes = new();
         internal int LevelPackageIndex;
         private LevelExport _level;
 
@@ -20,9 +18,9 @@ namespace Overdare
         {
             foreach (var actorPackageIndex in _level.Actors)
             {
-                var objRef = ObjectReference.TryFromPackageIndex(Asset, actorPackageIndex);
+                LoadedActor objRef = new(this, actorPackageIndex);
                 if (objRef == null) continue;
-                var normalExport = objRef.ToExport(Asset);
+                var normalExport = objRef.Export;
                 var classType = normalExport.GetExportClassType();
                 if (classType == null) continue;
                 var classTypeName = classType.Value;
@@ -37,27 +35,21 @@ namespace Overdare
         /// Especially useful for LuaDataModel exports from UAsset.
         /// </summary>
         /// <param name="export"></param>
-        private LuaInstance LoadIntoLuaInstance(ObjectReference objRef)
+        private LuaInstance LoadIntoLuaInstance(LoadedActor loadedActor)
         {
-            var export = objRef.ToExport(Asset);
-            var classType = export.GetExportClassType();
-            if (classType == null) throw new Exception("Export does not have a class type.");
-            var classTypeName = classType.Value;
-            if (classTypeName == null) throw new Exception("Export class type name is null.");
+            var export = loadedActor.Export;
+            var classType = export.GetExportClassType() ?? throw new Exception("Export does not have a class type.");
+            var classTypeName = classType.Value ?? throw new Exception("Export class type name is null.");
 
-            var luaInstance = new LuaInstance(objRef)
-            {
-                //luaInstance.Name = export["Name"] is StrPropertyData strProp && export.ObjectName.Value.Value == strProp.Value.Value ? strProp.Value.Value : null;
-                RawName = export["Name"] is StrPropertyData strProp ? export.ObjectName : null,
-                RawMap = this,
-            };
+            var luaInstance = LuaInstance.CreateFromClassName(classTypeName.Value, loadedActor);
+            luaInstance.Map = this;
 
             if (export["LuaChildren"] is ArrayPropertyData childrenArr)
             {
                 foreach (var child in childrenArr.Value)
                 {
                     if (child is not ObjectPropertyData objProp) continue;
-                    var childObjRef = ObjectReference.TryFromPackageIndex(Asset, objProp.Value);
+                    LoadedActor childObjRef = new(this, objProp.Value);
                     if (childObjRef == null) continue;
                     var childInstance = LoadIntoLuaInstance(childObjRef);
                     childInstance.Parent = luaInstance;
@@ -102,82 +94,92 @@ namespace Overdare
 
         public void Save(string path)
         {
-            LuaDataModel.Save(this, null);
-
-            // Update every FPackageIndex and normalize the exports.
-            var UpdateList = new int?[Asset.Exports.Count];
-            int next = 0;
-            for (int i = 0; i < Asset.Exports.Count; i++)
-            {
-                if (DestroyedExportsIndexes.Contains(i))
-                {
-                    UpdateList[i] = null;
-                    continue;
-                }
-                UpdateList[i] = next;
-                next++;
-            }
-            KillResult killResult = new();
-            FPackageIndexUpdater updater = new(UpdateList, Asset, killResult);
-            Console.WriteLine(JsonConvert.SerializeObject(UpdateList, Formatting.Indented));
-            //JToken.FromObject(Asset, updater.Serializer);
-            for (int i = 0; i < Asset.Exports.Count; i++)
-            {
-                killResult.Value = false;
-                JToken.FromObject(Asset.Exports[i], updater.Serializer);
-                if (killResult.Value)
-                {
-                    //DestroyedExportsIndexes.Add(i);
-                    Console.WriteLine($"bonus killed2 {i}");
-                }
-            }
-            for (int i = 0; i < Asset.Exports.Count; i++)
-            {
-                killResult.Value = false;
-                JToken.FromObject(Asset.Exports[i], updater.Serializer);
-                if (killResult.Value)
-                {
-                    DestroyedExportsIndexes.Add(i);
-                    Console.WriteLine($"bonus killed {i}");
-                }
-            }
-            next = 0;
-            for (int i = 0; i < Asset.Exports.Count; i++)
-            {
-                if (DestroyedExportsIndexes.Contains(i))
-                {
-                    UpdateList[i] = null;
-                    continue;
-                }
-                UpdateList[i] = next;
-                next++;
-            }
-            Console.WriteLine(JsonConvert.SerializeObject(UpdateList, Formatting.Indented));
-            JToken.FromObject(Asset, updater.Serializer);
-
+            LuaDataModel.Save(null);
             for (int i = _level.Actors.Count - 1; i >= 0; i--)
             {
                 var actorPackageIndex = _level.Actors[i];
-                if (actorPackageIndex.IsNull()) _level.Actors.RemoveAt(i);
+                if (UnlinkedExportsIndexes.Contains(i)) _level.Actors.RemoveAt(i);
             }
-            for (int i = Asset.Exports.Count - 1; i >= 0; i--)
-            {
-                if (DestroyedExportsIndexes.Contains(i))
-                {
-                    Console.WriteLine($"Removing export at index {i}");
-                    Asset.Exports.RemoveAt(i);
-                }
-            }
-
-            Asset.Write(path);
         }
 
-        internal FPackageIndex AddActor(NormalExport export)
+        //public void Save(string path)
+        //{
+        //    LuaDataModel.Save(this, null);
+
+        //    // Update every FPackageIndex and normalize the exports.
+        //    var UpdateList = new int?[Asset.Exports.Count];
+        //    int next = 0;
+        //    for (int i = 0; i < Asset.Exports.Count; i++)
+        //    {
+        //        if (DestroyedExportsIndexes.Contains(i))
+        //        {
+        //            UpdateList[i] = null;
+        //            continue;
+        //        }
+        //        UpdateList[i] = next;
+        //        next++;
+        //    }
+        //    KillResult killResult = new();
+        //    FPackageIndexUpdater updater = new(UpdateList, Asset, killResult);
+        //    Console.WriteLine(JsonConvert.SerializeObject(UpdateList, Formatting.Indented));
+        //    //JToken.FromObject(Asset, updater.Serializer);
+        //    for (int i = 0; i < Asset.Exports.Count; i++)
+        //    {
+        //        killResult.Value = false;
+        //        JToken.FromObject(Asset.Exports[i], updater.Serializer);
+        //        if (killResult.Value)
+        //        {
+        //            //DestroyedExportsIndexes.Add(i);
+        //            Console.WriteLine($"bonus killed2 {i}");
+        //        }
+        //    }
+        //    for (int i = 0; i < Asset.Exports.Count; i++)
+        //    {
+        //        killResult.Value = false;
+        //        JToken.FromObject(Asset.Exports[i], updater.Serializer);
+        //        if (killResult.Value)
+        //        {
+        //            DestroyedExportsIndexes.Add(i);
+        //            Console.WriteLine($"bonus killed {i}");
+        //        }
+        //    }
+        //    next = 0;
+        //    for (int i = 0; i < Asset.Exports.Count; i++)
+        //    {
+        //        if (DestroyedExportsIndexes.Contains(i))
+        //        {
+        //            UpdateList[i] = null;
+        //            continue;
+        //        }
+        //        UpdateList[i] = next;
+        //        next++;
+        //    }
+        //    Console.WriteLine(JsonConvert.SerializeObject(UpdateList, Formatting.Indented));
+        //    JToken.FromObject(Asset, updater.Serializer);
+
+        //    for (int i = _level.Actors.Count - 1; i >= 0; i--)
+        //    {
+        //        var actorPackageIndex = _level.Actors[i];
+        //        if (actorPackageIndex.IsNull()) _level.Actors.RemoveAt(i);
+        //    }
+        //    for (int i = Asset.Exports.Count - 1; i >= 0; i--)
+        //    {
+        //        if (DestroyedExportsIndexes.Contains(i))
+        //        {
+        //            Console.WriteLine($"Removing export at index {i}");
+        //            Asset.Exports.RemoveAt(i);
+        //        }
+        //    }
+
+        //    Asset.Write(path);
+        //}
+
+        internal int AddActor(NormalExport export)
         {
             var parentPackageIndex = FPackageIndex.FromExport(Asset.Exports.Count);
             Asset.Exports.Add(export);
             _level.Actors.Add(parentPackageIndex);
-            return parentPackageIndex;
+            return parentPackageIndex.Index - 1;
         }
 
         public FName GetNextName(string baseName)

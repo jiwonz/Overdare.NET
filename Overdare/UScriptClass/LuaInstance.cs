@@ -5,123 +5,166 @@ namespace Overdare.UScriptClass
 {
     public class LuaInstance
     {
-        internal FName? RawName;
-        internal Map? RawMap;
-        public Map Map
+        private string? _customName;
+        public string? Name
         {
             get
             {
-                if (RawMap == null) throw new InvalidOperationException("Map is not set for this LuaInstance.");
-                return RawMap;
+                if (_customName != null && _customName.Length > 0) return _customName;
+                if (SavingActor is LoadedActor loadedActor && loadedActor.Export["Name"] is StrPropertyData strProp)
+                {
+                    return strProp.Value.Value;
+                }
+                return null;
+            }
+            set
+            {
+                if (value != null && value.Length > 0)
+                {
+                    _customName = value;
+                }
+                else
+                {
+                    _customName = null;
+                }
+            }
+        }
+        public string ClassName;
+        private Map? _mountedMap;
+        public Map? Map
+        {
+            get => _mountedMap;
+            set
+            {
+                foreach (var child in _children)
+                {
+                    child.Map = value;
+                }
+                _mountedMap = value;
             }
         }
         // TO-DO: This can be improved by adding a default Export like LuaModel or something.
-        public ObjectReference? ExportReference;
+        public SavedActor? SavingActor;
         /// <summary>
         /// For already saved exports from the current asset.
         /// They're going to be null'ed then re-added when the instance is saved again.
         /// </summary>
         //internal FPackageIndex? _savedExportIndex;
+        public bool ParentLocked { get; internal set; }
         private LuaInstance? _parent;
         public LuaInstance? Parent
         {
             get => _parent;
             set
             {
+                if (ParentLocked)
+                {
+                    throw new InvalidOperationException("Cannot change ParentLocked instance's parent. This instance might be destroyed already.");
+                }
+
                 if (IsAncestorOf(value))
                 {
-                    throw new InvalidOperationException($"Attempt to set parent to an instance that would result in circular reference");
+                    throw new InvalidOperationException($"Attempt to set parent to an instance that would result in circular reference.");
                 }
 
                 if (Parent == this)
-                    throw new InvalidOperationException($"Attempt to set as its own parent");
+                    throw new InvalidOperationException($"Attempt to set as its own parent.");
 
                 _parent?._children.Remove(this);
                 value?._children.Add(this);
                 _parent = value;
-                if (value?.RawMap != null) RawMap = value.RawMap;
+                if (value?._mountedMap != null) Map = value._mountedMap;
             }
         }
         private readonly HashSet<LuaInstance> _children = [];
-        //internal bool _destroyed = false;
 
-        // Not public because It is not normal case to create LuaInstance without ExportReference
         internal LuaInstance()
         {
 
         }
 
-        public LuaInstance(ObjectReference objRef)
+        public LuaInstance(LoadedActor loadedActor)
         {
-            ExportReference = objRef;
+            SavingActor = loadedActor;
+            Map = loadedActor.LinkedMap;
+            var classType = loadedActor.Export.GetExportClassType();
+            if (classType == null) throw new InvalidOperationException("Export does not have a class type.");
+            ClassName = classType.Value?.Value ?? throw new InvalidOperationException("Export class type name is null.");
         }
 
-        //public static LuaInstance? TryCreateFromClassName(string className) => className switch
-        //{
-        //    "LuaFolder" => new LuaFolder(),
-        //    _ => null,
-        //};
-
-        internal virtual void Save(Map map, ObjectReference? parentObjRef)
+        public static LuaInstance? CreateFromClassName(string className) => className switch
         {
-            var asset = map.Asset;
-            if (ExportReference != null)
+            "LuaFolder" => new LuaFolder(),
+            _ => null,
+        };
+
+        public static LuaInstance CreateFromClassName(string className, LoadedActor loadedActor) => className switch
+        {
+            "LuaFolder" => new LuaFolder(loadedActor),
+            _ => new LuaInstance(loadedActor),
+        };
+
+        internal virtual void Save(int? parentExportIndex)
+        {
+            if (Map == null) throw new InvalidOperationException("Map is required to save a LuaInstance.");
+            if (SavingActor is LoadedActor loadedActor && loadedActor.LinkedMap != Map)
             {
-                //if (_destroyed)
-                //{
-                //    map.DestroyedExportsIndexes.Add(ExportReference.NormalExportIndex);
-                //    foreach (var child in _children)
-                //    {
-                //        child.Save(map, ExportReference);
-                //    }
-                //    return;
-                //}
-
-                var export = ExportReference.ToExport(asset);
-                // Apply properties Name(ObjectName, Name, ActorName) and Parent (LuaChildren is set later because we need ExportReference which can be set after their .Save() method called)
-                if (RawName != null)
-                {
-                    export.ObjectName = RawName;
-                    export["Name"] = new StrPropertyData()
-                    {
-                        Name = FName.FromString(asset, "Name"),
-                        Value = RawName.Value,
-                    };
-                    export["ActorLabel"] = new StrPropertyData()
-                    {
-                        Name = FName.FromString(asset, "ActorLabel"),
-                        Value = RawName.Value,
-                    };
-                }
-                if (parentObjRef != null)
-                {
-                    export["Parent"] = new ObjectPropertyData()
-                    {
-                        Name = FName.FromString(asset, "Parent"),
-                        Value = parentObjRef.ToPackageIndex()
-                    };
-                }
-
-                parentObjRef = ExportReference;
+                throw new InvalidOperationException("SavingActor is a LoadedActor from a different Map, cannot save LuaInstance.");
             }
-            if (parentObjRef == null) throw new InvalidOperationException("Invalid parent");
+            if (SavingActor == null) throw new InvalidOperationException("SavingActor is required to save a LuaInstance");
+            var export = SavingActor.Export;
+            var asset = export.Asset;
+            // Apply properties Name(ObjectName, Name, ActorName) and Parent (LuaChildren is set later because we need ExportReference which can be set after their .Save() method called)
+            FName? newName = null;
+            if (_customName != null && _customName.Length > 0)
+            {
+                newName = Map.GetNextName(_customName);
+            }
+            else if (SavingActor is LoadedActor)
+            {
+                newName = export["Name"] is StrPropertyData strProp ? export.ObjectName : null;
+            }
+            if (newName != null)
+            {
+                export.ObjectName = newName;
+                export["Name"] = new StrPropertyData()
+                {
+                    Name = FName.FromString(asset, "Name"),
+                    Value = newName.Value,
+                };
+                export["ActorLabel"] = new StrPropertyData()
+                {
+                    Name = FName.FromString(asset, "ActorLabel"),
+                    Value = newName.Value,
+                };
+            }
+            if (parentExportIndex != null)
+            {
+                export["Parent"] = new ObjectPropertyData()
+                {
+                    Name = FName.FromString(asset, "Parent"),
+                    Value = FPackageIndex.FromExport(parentExportIndex.Value)
+                };
+            }
+
+            parentExportIndex = SavingActor.ExportIndex;
+
             var childrenArray = GetChildren();
             var luaChildrenValue = new PropertyData[childrenArray.Length];
             for (int i = 0; i < childrenArray.Length; i++)
             {
                 var child = childrenArray[i];
-                child.Save(map, parentObjRef);
-                if (child.ExportReference == null) throw new InvalidOperationException("The LuaInstance.Save() method did not create and add any Export.");
+                child.Save(parentExportIndex);
+                if (child.SavingActor == null) throw new InvalidOperationException("SavingActor is required to save a LuaInstance");
                 luaChildrenValue[i] = new ObjectPropertyData()
                 {
                     Name = FName.FromString(asset, i.ToString()),
-                    Value = child.ExportReference.ToPackageIndex()
+                    Value = FPackageIndex.FromExport(child.SavingActor.ExportIndex)
                 };
             }
-            if (childrenArray.Length > 0 && ExportReference != null)
+            if (childrenArray.Length > 0)
             {
-                var export = ExportReference.ToExport(asset);
-                export["LuaChildren"] = new ArrayPropertyData()
+                SavingActor.Export["LuaChildren"] = new ArrayPropertyData()
                 {
                     Name = FName.FromString(asset, "LuaChildren"),
                     Value = luaChildrenValue
@@ -166,55 +209,29 @@ namespace Overdare.UScriptClass
         public void Destroy()
         {
             Parent = null;
-            if (ExportReference != null)
+            ParentLocked = true;
+            if (SavingActor is LoadedActor loadedActor)
             {
-                Map.DestroyedExportsIndexes.Add(ExportReference.NormalExportIndex);
-                var packageIndex = ExportReference.ToPackageIndex();
-                for (int i = 0; i < Map.Asset.Exports.Count; i++)
-                {
-                    if (Map.Asset.Exports[i].OuterIndex.Index == packageIndex.Index)
-                    {
-                        Console.WriteLine("You died too");
-                        Map.DestroyedExportsIndexes.Add(i);
-                    }
-                }
+                loadedActor.Unlink();
             }
+            //if (ExportReference != null)
+            //{
+            //    Map.DestroyedExportsIndexes.Add(ExportReference.NormalExportIndex);
+            //    var packageIndex = ExportReference.ToPackageIndex();
+            //    for (int i = 0; i < Map.Asset.Exports.Count; i++)
+            //    {
+            //        if (Map.Asset.Exports[i].OuterIndex.Index == packageIndex.Index)
+            //        {
+            //            Console.WriteLine("You died too");
+            //            Map.DestroyedExportsIndexes.Add(i);
+            //        }
+            //    }
+            //}
             //_destroyed = true;
             while (_children.Count != 0)
             {
                 var child = _children.First();
                 child.Destroy();
-            }
-        }
-
-        public string GetClassName(Map map)
-        {
-            if (ExportReference == null) throw new InvalidOperationException("ExportReference is null, cannot determine class name.");
-            var export = ExportReference.ToExport(map.Asset);
-            var classType = export.GetExportClassType();
-            if (classType == null) throw new InvalidOperationException("Export does not have a class type.");
-            return classType.Value?.Value ?? throw new InvalidOperationException("Export class type name is null.");
-        }
-
-        // Get Instance name or from ExportReference if it is not set.
-        public string Name
-        {
-            get
-            {
-                if (RawName != null) return RawName.Value.Value; // If Name is set, return it.
-                if (ExportReference == null) throw new InvalidOperationException("ExportReference is null, cannot determine name.");
-                var export = ExportReference.ToExport(Map.Asset);
-                if (export.ObjectName.Value == null) throw new InvalidOperationException("Export ObjectName is null.");
-                return RawName?.Value.Value ?? export.ObjectName.Value.Value;
-            }
-            set
-            {
-                if (value == null)
-                {
-                    RawName = null;
-                    return;
-                }
-                RawName = Map.GetNextName(value);
             }
         }
 
@@ -234,7 +251,19 @@ namespace Overdare.UScriptClass
         {
             foreach (var child in GetChildren())
             {
-                if (child.GetClassName(Map) == className)
+                if (child.ClassName == className)
+                {
+                    return child;
+                }
+            }
+            return null;
+        }
+
+        public LuaInstance? FindFirstChildOfClass<T>()
+        {
+            foreach (var child in GetChildren())
+            {
+                if (child is T)
                 {
                     return child;
                 }

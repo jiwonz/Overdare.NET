@@ -1,4 +1,5 @@
-﻿using Overdare.UScriptClass;
+﻿using Newtonsoft.Json;
+using Overdare.UScriptClass;
 
 namespace Overdare
 {
@@ -7,7 +8,7 @@ namespace Overdare
         private static void Main(string[] args)
         {
             var map = Map.Open("input.umap");
-            //Console.WriteLine(JsonConvert.SerializeObject(map.LuaDataModel.GetDescendants().Select(x => x.GetClassName(map)), Formatting.Indented));
+            Console.WriteLine(JsonConvert.SerializeObject(map.LuaDataModel.GetDescendants().Select(x => x.ClassName), Formatting.Indented));
             var workspace = map.LuaDataModel.FindFirstChildOfClass("LuaWorkspace");
             var folder = workspace?.FindFirstChild("LuaFolder");
             Console.WriteLine($"folder: {folder}");

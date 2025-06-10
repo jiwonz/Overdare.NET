@@ -7,21 +7,33 @@ namespace Overdare.UScriptClass
 {
     public class LuaFolder : LuaInstance
     {
+        private const string _ClassName = "LuaFolder";
+        public SavedActor? RootComponent;
+
         public LuaFolder()
         {
-
+            ClassName = _ClassName;
         }
 
-        internal override void Save(Map map, ObjectReference? parentObjRef)
+        internal override void Save(int? parentExportIndex)
         {
-            var asset = map.Asset;
+            if (SavingActor != null)
+            {
+                base.Save(parentExportIndex);
+                return;
+            }
+
+            if (Map == null)
+                throw new InvalidOperationException("Cannot save a new LuaFolder without a Map.");
+
+            var asset = Map.Asset;
 
             var rootComponentIndex = FPackageIndex.FromExport(asset.Exports.Count);
             var luaFolderIndex = FPackageIndex.FromExport(asset.Exports.Count + 1);
             NormalExport rootComponent = new(asset, [0, 0, 0, 0])
             {
                 ClassIndex = new(asset.SearchForImport(new FName(asset, "SceneComponent"))),
-                ObjectName = new FName(asset, "RootComponent"),
+                ObjectName = new(asset, "RootComponent"),
                 OuterIndex = luaFolderIndex,
                 ObjectFlags = EObjectFlags.RF_Transactional | EObjectFlags.RF_DefaultSubObject,
                 SuperIndex = new(),
@@ -30,12 +42,12 @@ namespace Overdare.UScriptClass
                 bNotAlwaysLoadedForEditorGame = true,
                 Data = []
             };
-            var luaFolderName = Utility.GetNextName(asset, "LuaFolder");
+            var luaFolderName = Utility.GetNextName(asset, _ClassName);
             NormalExport luaFolder = new(asset, [0, 0, 0, 0])
             {
-                ClassIndex = new(asset.SearchForImport(new FName(asset, "LuaFolder"))),
+                ClassIndex = new(asset.SearchForImport(new FName(asset, _ClassName))),
                 ObjectName = luaFolderName,
-                OuterIndex = FPackageIndex.FromExport(map.LevelPackageIndex),
+                OuterIndex = FPackageIndex.FromExport(Map.LevelPackageIndex),
                 ObjectFlags = EObjectFlags.RF_Transactional,
                 SuperIndex = new(),
                 TemplateIndex = new(),
@@ -44,56 +56,65 @@ namespace Overdare.UScriptClass
                 Data =
                 [
                     new StrPropertyData()
-            {
-                Name = FName.FromString(asset, "Name"),
-                Value = luaFolderName.Value,
-            },
-            new StrPropertyData()
-            {
-                Name = FName.FromString(asset, "ActorLabel"),
-                Value = luaFolderName.Value,
-            },
-            new StructPropertyData()
-            {
-                Name = FName.FromString(asset, "ActorGuid"),
-                StructType = FName.FromString(asset, "Guid"),
-                SerializeNone = true,
-                StructGUID = Guid.Empty,
-                Value = new List<PropertyData>()
-                {
-                    new GuidPropertyData()
+                    {
+                        Name = FName.FromString(asset, "Name"),
+                        Value = luaFolderName.Value,
+                    },
+                    new StrPropertyData()
+                    {
+                        Name = FName.FromString(asset, "ActorLabel"),
+                        Value = luaFolderName.Value,
+                    },
+                    new StructPropertyData()
                     {
                         Name = FName.FromString(asset, "ActorGuid"),
-                        Value = Guid.NewGuid() // This generates a new GUID  
+                        StructType = FName.FromString(asset, "Guid"),
+                        SerializeNone = true,
+                        StructGUID = Guid.Empty,
+                        Value = new List<PropertyData>()
+                        {
+                            new GuidPropertyData()
+                            {
+                                Name = FName.FromString(asset, "ActorGuid"),
+                                Value = Guid.NewGuid() // This generates a new GUID  
+                            }
+                        }
+                    },
+                    new ObjectPropertyData()
+                    {
+                        Name = FName.FromString(asset, "RootComponent"),
+                        Value = rootComponentIndex
+                    },
+                    new BoolPropertyData()
+                    {
+                        Name = FName.FromString(asset, "bHidden"),
+                        Value = true
+                    },
+                    new BoolPropertyData()
+                    {
+                        Name = FName.FromString(asset, "bActorEnableCollision"),
+                        Value = false
+                    },
+                    new BoolPropertyData()
+                    {
+                        Name = FName.FromString(asset, "EnabledMobility"),
+                        Value = true
                     }
-                }
-            },
-            parentObjRef != null ? new ObjectPropertyData()
-            {
-                Name = FName.FromString(asset, "Parent"),
-                Value = parentObjRef.ToPackageIndex()
-            } : null,
-            new ObjectPropertyData()
-            {
-                Name = FName.FromString(asset, "RootComponent"),
-                Value = rootComponentIndex
-            },
-            new BoolPropertyData()
-            {
-                Name = FName.FromString(asset, "bHidden"),
-                Value = true
-            },
-            new BoolPropertyData()
-            {
-                Name = FName.FromString(asset, "bActorEnableCollision"),
-                Value = false
-            },
-        ]
+                ]
             };
-            map.Asset.Exports.Add(rootComponent);
-            map.AddActor(luaFolder);
-            ExportReference = new ObjectReference(asset, luaFolderIndex);
-            base.Save(map, parentObjRef);
+            asset.Exports.Add(rootComponent);
+            Map.AddActor(luaFolder);
+
+            RootComponent = new(asset, rootComponentIndex);
+            SavingActor = new(asset, luaFolderIndex);
+        }
+
+        public LuaFolder(LoadedActor loadedActor) : base(loadedActor)
+        {
+            if (loadedActor.Export["RootComponent"] is ObjectPropertyData rootComponentProp)
+                RootComponent = new LoadedActor(loadedActor.LinkedMap, rootComponentProp.Value);
+            else
+                throw new Exception("LuaFolder export does not have RootComponent property. Which is expected.");
         }
     }
 }

@@ -4,6 +4,9 @@ using UAssetAPI.UnrealTypes;
 
 namespace Overdare
 {
+    /// <summary>
+    /// Represents a saved actor in a UAsset file.
+    /// </summary>
     public class SavedActor
     {
         public int ExportIndex;

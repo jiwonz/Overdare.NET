@@ -79,14 +79,10 @@ namespace Overdare.UScriptClass
             };
             asset.Read(reader);
             asset.Exports[1].ObjectName = FName.FromString(asset, objectName); // The second export is the LuaCode export
-            using (MD5 md5 = MD5.Create())
-            {
-                byte[] hash = md5.ComputeHash(Encoding.UTF8.GetBytes(objectName));
-                string hex = BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
-                Console.WriteLine(hex); // Example output: "E223FE648FDDB0169E76784E71662340"
-                if (asset.Exports[2] is not MetaDataExport metaDataExport) throw new UnreachableException();
-                metaDataExport.RootMetaData[FName.FromString(asset, "PackageLocalizationNamespace")] = FString.FromString(hex);
-            }
+            byte[] hash = MD5.HashData(Encoding.UTF8.GetBytes(objectName));
+            string hex = BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
+            if (asset.Exports[2] is not MetaDataExport metaDataExport) throw new UnreachableException();
+            metaDataExport.RootMetaData[FName.FromString(asset, "PackageLocalizationNamespace")] = FString.FromString(hex);
 
             return asset;
         }
@@ -117,6 +113,7 @@ namespace Overdare.UScriptClass
             var luaScriptIndex = FPackageIndex.FromExport(asset.Exports.Count);
             var luaScriptClassName = Map.GetNextName(ClassName);
 
+            var classIndex = ClassIndex; // Should get this first before adding the same class named(if Name was not given) imports above
             var packageIndex = FPackageIndex.FromImport(asset.Imports.Count);
             var luaCodeIndex = FPackageIndex.FromImport(asset.Imports.Count + 1);
             var newName = GetNextName() ?? luaScriptClassName;
@@ -129,9 +126,10 @@ namespace Overdare.UScriptClass
                 PackageName = FName.FromString(asset, "None")
             });
 
+            luaScriptClassName = Map.GetNextName(ClassName);
             NormalExport luaScript = new(asset, [0, 0, 0, 0])
             {
-                ClassIndex = new(asset.SearchForImport(new FName(asset, ClassName))),
+                ClassIndex = classIndex,
                 ObjectName = luaScriptClassName,
                 OuterIndex = FPackageIndex.FromExport(Map.LevelPackageIndex),
                 ObjectFlags = EObjectFlags.RF_Transactional,

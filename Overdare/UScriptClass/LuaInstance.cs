@@ -1,4 +1,5 @@
-﻿using UAssetAPI.PropertyTypes.Objects;
+﻿using System.Diagnostics;
+using UAssetAPI.PropertyTypes.Objects;
 using UAssetAPI.UnrealTypes;
 
 namespace Overdare.UScriptClass
@@ -30,6 +31,42 @@ namespace Overdare.UScriptClass
             }
         }
         public string ClassName { get; init; }
+
+        internal static FPackageIndex GetClassIndex(Map? mapProp, string className, ref FPackageIndex? classIndexProp)
+        {
+            if (classIndexProp != null) return classIndexProp;
+            if (mapProp == null) throw new InvalidOperationException("Cannot get ClassIndex without Map");
+            var asset = mapProp.Asset;
+            var foundIndex = asset.SearchForImport(FName.FromString(asset, className));
+            Console.WriteLine($"{className} {foundIndex}");
+            if (foundIndex != 0 && foundIndex < 0)
+            {
+                FPackageIndex foundClass = new(foundIndex);
+                if (foundClass.ToImport(asset).ClassPackage.Value.Value == "/Script/CoreUObject")
+                {
+                    classIndexProp = foundClass;
+                    return classIndexProp;
+                }
+            }
+            foundIndex = asset.SearchForImport(FName.FromString(asset, "/Script/LuaAPI"));
+            if (foundIndex == 0) throw new UnreachableException();
+            Console.WriteLine($"{className} {foundIndex}");
+            classIndexProp = FPackageIndex.FromImport(asset.Imports.Count);
+            asset.Imports.Add(new(FName.FromString(asset, "/Script/CoreUObject"), FName.FromString(asset, "Class"), new(foundIndex), FName.FromString(asset, className), false)
+            {
+                PackageName = FName.FromString(asset, "None")
+            });
+            return classIndexProp;
+        }
+
+        private FPackageIndex? _classIndex;
+        internal FPackageIndex ClassIndex
+        {
+            get
+            {
+                return GetClassIndex(Map, ClassName, ref _classIndex);
+            }
+        }
         private Map? _mountedMap;
         public Map? Map
         {

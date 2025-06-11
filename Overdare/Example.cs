@@ -28,6 +28,34 @@ namespace Overdare
                 Name = "HelloWorldScript",
                 Parent = workspace,
             };
+            new LuaModuleScript()
+            {
+                Source = "return { apple = true }\n",
+                Name = "Apple",
+                Parent = script,
+            };
+            new LuaModuleScript()
+            {
+                Source = "return { hello = function() print('hallo') end }\n",
+                Name = "Hello",
+                Parent = script,
+            };
+            LuaModuleScript lib = new()
+            {
+                Source = "return { dep = require(script.Dependency) }\n",
+                Name = "Dependency",
+                Parent = new LuaModuleScript()
+                {
+                    Source = "return { hello = function() print('hallo') end }\n",
+                    Name = "Package",
+                    Parent = script,
+                }
+            };
+            new LuaLocalScript()
+            {
+                Source = "print('This is a local script')\n",
+                Parent = lib,
+            };
             PrintInstance(map.LuaDataModel);
             map.Save("out.umap");
             //map.Save("nah.umap");

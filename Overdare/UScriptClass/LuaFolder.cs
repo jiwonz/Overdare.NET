@@ -9,6 +9,15 @@ namespace Overdare.UScriptClass
     {
         public SavedActor? RootComponent;
 
+        private FPackageIndex? _sceneComponentClassIndex;
+        internal FPackageIndex SceneComponentClassIndex
+        {
+            get
+            {
+                return GetClassIndex(Map, "SceneComponent", ref _sceneComponentClassIndex);
+            }
+        }
+
         public LuaFolder()
         {
             ClassName = nameof(LuaFolder);
@@ -32,7 +41,7 @@ namespace Overdare.UScriptClass
             var luaFolderIndex = FPackageIndex.FromExport(asset.Exports.Count + 1);
             NormalExport rootComponent = new(asset, [0, 0, 0, 0])
             {
-                ClassIndex = new(asset.SearchForImport(new FName(asset, "SceneComponent"))),
+                ClassIndex = SceneComponentClassIndex,
                 ObjectName = new(asset, "RootComponent"),
                 OuterIndex = luaFolderIndex,
                 ObjectFlags = EObjectFlags.RF_Transactional | EObjectFlags.RF_DefaultSubObject,
@@ -45,7 +54,7 @@ namespace Overdare.UScriptClass
             var luaFolderClassName = Map.GetNextName(ClassName);
             NormalExport luaFolder = new(asset, [0, 0, 0, 0])
             {
-                ClassIndex = new(asset.SearchForImport(new FName(asset, ClassName))),
+                ClassIndex = ClassIndex,
                 ObjectName = luaFolderClassName,
                 OuterIndex = FPackageIndex.FromExport(Map.LevelPackageIndex),
                 ObjectFlags = EObjectFlags.RF_Transactional,

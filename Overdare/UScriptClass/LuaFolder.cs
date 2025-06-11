@@ -42,11 +42,11 @@ namespace Overdare.UScriptClass
                 bNotAlwaysLoadedForEditorGame = true,
                 Data = []
             };
-            var luaFolderName = Utility.GetNextName(asset, _ClassName);
+            var luaFolderClassName = Map.GetNextName(_ClassName);
             NormalExport luaFolder = new(asset, [0, 0, 0, 0])
             {
                 ClassIndex = new(asset.SearchForImport(new FName(asset, _ClassName))),
-                ObjectName = luaFolderName,
+                ObjectName = luaFolderClassName,
                 OuterIndex = FPackageIndex.FromExport(Map.LevelPackageIndex),
                 ObjectFlags = EObjectFlags.RF_Transactional,
                 SuperIndex = new(),
@@ -57,13 +57,8 @@ namespace Overdare.UScriptClass
                 [
                     new StrPropertyData()
                     {
-                        Name = FName.FromString(asset, "Name"),
-                        Value = luaFolderName.Value,
-                    },
-                    new StrPropertyData()
-                    {
                         Name = FName.FromString(asset, "ActorLabel"),
-                        Value = luaFolderName.Value,
+                        Value = FString.FromString(luaFolderClassName.ToString()),
                     },
                     new StructPropertyData()
                     {

@@ -111,7 +111,7 @@ namespace Overdare.UScriptClass
             if (loadedActor.Export["RootComponent"] is ObjectPropertyData rootComponentProp)
                 RootComponent = new LoadedActor(loadedActor.LinkedMap, rootComponentProp.Value);
             else
-                throw new Exception("LuaFolder export does not have RootComponent property. Which is expected.");
+                throw new Exception("LuaFolder export does not have RootComponent property. Which is unexpected.");
         }
     }
 }

@@ -86,10 +86,33 @@ namespace Overdare
             LuaDataModel = luaDataModel;
         }
 
+        public static Map Open(byte[] buffer)
+        {
+            MemoryStream stream = new(buffer);
+            return Open(stream);
+        }
+
+        public static Map Open(AssetBinaryReader reader)
+        {
+            UAsset asset = new();
+            asset.Mappings = null;
+            asset.CustomSerializationFlags = CustomSerializationFlags.None;
+            asset.SetEngineVersion(SandboxMetadata.UnrealEngineVersion);
+            reader.Asset = asset;
+            asset.Read(reader);
+            return new(asset);
+        }
+
+        public static Map Open(Stream stream)
+        {
+            AssetBinaryReader reader = new(stream);
+            return Open(reader);
+        }
+
         public static Map Open(string path)
         {
-            UAsset asset = new(path);
-            return new(asset);
+            byte[] buffer = File.ReadAllBytes(path);
+            return Open(buffer);
         }
 
         public void Save(string path)

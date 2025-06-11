@@ -94,9 +94,11 @@ namespace Overdare
 
         public static Map Open(AssetBinaryReader reader)
         {
-            UAsset asset = new();
-            asset.Mappings = null;
-            asset.CustomSerializationFlags = CustomSerializationFlags.None;
+            UAsset asset = new()
+            {
+                Mappings = null,
+                CustomSerializationFlags = CustomSerializationFlags.None
+            };
             asset.SetEngineVersion(SandboxMetadata.UnrealEngineVersion);
             reader.Asset = asset;
             asset.Read(reader);
@@ -112,12 +114,14 @@ namespace Overdare
         public static Map Open(string path)
         {
             byte[] buffer = File.ReadAllBytes(path);
-            return Open(buffer);
+            var map = Open(buffer);
+            map.Asset.FilePath = path;
+            return map;
         }
 
         public void Save(string path)
         {
-            LuaDataModel.Save(null);
+            LuaDataModel.Save(null, path);
             foreach (var kv in UnlinkedExportsAndInstances)
             {
                 kv.Value.Unlink();

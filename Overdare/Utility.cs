@@ -1,5 +1,4 @@
 ﻿using UAssetAPI;
-using UAssetAPI.ExportTypes;
 using UAssetAPI.UnrealTypes;
 
 namespace Overdare
@@ -9,11 +8,15 @@ namespace Overdare
         public static FName GetNextName(UAsset asset, string baseName)
         {
             int n = 0;
-            foreach (Export export in asset.Exports)
+            foreach (var export in asset.Exports)
             {
                 if (export.ObjectName.Value.Value == baseName) n++;
             }
-            return new FName(asset, baseName, n + 1);
+            foreach (var import in asset.Imports)
+            {
+                if (import.ObjectName.Value.Value == baseName) n++;
+            }
+            return new FName(asset, baseName, n);
         }
     }
 }

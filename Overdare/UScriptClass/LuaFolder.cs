@@ -14,14 +14,15 @@ namespace Overdare.UScriptClass
             ClassName = nameof(LuaFolder);
         }
 
-        internal override void Save(int? parentExportIndex)
+        internal override void Save(int? parentExportIndex, string? outputPath)
         {
             if (SavingActor != null)
             {
-                base.Save(parentExportIndex);
+                base.Save(parentExportIndex, outputPath);
                 return;
             }
 
+            // Try to save a new LuaFolder because SavingActor was null
             if (Map == null)
                 throw new InvalidOperationException("Cannot save a new LuaFolder without a Map.");
 
@@ -50,8 +51,6 @@ namespace Overdare.UScriptClass
                 ObjectFlags = EObjectFlags.RF_Transactional,
                 SuperIndex = new(),
                 TemplateIndex = new(),
-                IsInheritedInstance = false,
-                bNotAlwaysLoadedForEditorGame = false,
                 Data =
                 [
                     new StrPropertyData()
@@ -70,7 +69,7 @@ namespace Overdare.UScriptClass
                             new GuidPropertyData()
                             {
                                 Name = FName.FromString(asset, "ActorGuid"),
-                                Value = Guid.NewGuid() // This generates a new GUID  
+                                Value = Guid.NewGuid() // This generates a new GUID
                             }
                         }
                     },
@@ -88,21 +87,17 @@ namespace Overdare.UScriptClass
                     {
                         Name = FName.FromString(asset, "bActorEnableCollision"),
                         Value = false
-                    },
-                    new BoolPropertyData()
-                    {
-                        Name = FName.FromString(asset, "EnabledMobility"),
-                        Value = true
                     }
                 ]
             };
+
             asset.Exports.Add(rootComponent);
             Map.AddActor(luaFolder);
 
             RootComponent = new(asset, rootComponentIndex);
             SavingActor = new(asset, luaFolderIndex);
 
-            base.Save(parentExportIndex);
+            base.Save(parentExportIndex, outputPath);
         }
 
         public LuaFolder(LoadedActor loadedActor) : base(loadedActor)

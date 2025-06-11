@@ -1,6 +1,14 @@
 ﻿namespace Overdare.UScriptClass
 {
-    public class LuaScript : LuaInstance
+    public class LuaScript : BaseLuaScript
     {
+        public LuaScript()
+        {
+            ClassName = nameof(LuaScript);
+        }
+
+        public LuaScript(LoadedActor loadedActor) : base(loadedActor)
+        {
+        }
     }
 }

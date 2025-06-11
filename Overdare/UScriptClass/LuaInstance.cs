@@ -108,16 +108,45 @@ namespace Overdare.UScriptClass
         public static LuaInstance? CreateFromClassName(string className) => className switch
         {
             "LuaFolder" => new LuaFolder(),
+            "LuaScript" => new LuaScript(),
+            "LuaModuleScript" => new LuaModuleScript(),
+            "LuaLocalScript" => new LuaLocalScript(),
             _ => null,
         };
 
         public static LuaInstance CreateFromClassName(string className, LoadedActor loadedActor) => className switch
         {
             "LuaFolder" => new LuaFolder(loadedActor),
+            "LuaScript" => new LuaScript(loadedActor),
+            "LuaModuleScript" => new LuaModuleScript(loadedActor),
+            "LuaLocalScript" => new LuaLocalScript(loadedActor),
             _ => new LuaInstance(loadedActor),
         };
 
-        internal virtual void Save(int? parentExportIndex)
+        internal FName? GetNextName()
+        {
+            if (Map == null) throw new InvalidOperationException("Map is required to get a next FName.");
+            FName? newName = null;
+            if (_customName != null && _customName.Length > 0)
+            {
+                newName = Map.GetNextName(_customName);
+            }
+            else if (SavingActor is LoadedActor loadedActor)
+            {
+                var export = loadedActor.Export;
+                if (export["Name"] is StrPropertyData strProp)
+                {
+                    newName = strProp.Value == export.ObjectName.Value ? export.ObjectName : null;
+                }
+                else
+                {
+                    newName = null;
+                }
+            }
+            return newName;
+        }
+
+        internal virtual void Save(int? parentExportIndex, string? outputPath)
         {
             if (Map == null) throw new InvalidOperationException("Map is required to save a LuaInstance.");
             if (SavingActor == null) throw new InvalidOperationException("SavingActor is required to save a LuaInstance");
@@ -128,22 +157,7 @@ namespace Overdare.UScriptClass
             var export = SavingActor.Export;
             var asset = export.Asset;
             // Apply properties Name(ObjectName, Name, ActorName) and Parent (LuaChildren is set later because we need ExportReference which can be set after their .Save() method called)
-            FName? newName = null;
-            if (_customName != null && _customName.Length > 0)
-            {
-                newName = Map.GetNextName(_customName);
-            }
-            else if (SavingActor is LoadedActor)
-            {
-                if (export["Name"] is StrPropertyData strProp)
-                {
-                    newName = strProp.Value == export.ObjectName.Value ? export.ObjectName : null;
-                }
-                else
-                {
-                    newName = null;
-                }
-            }
+            var newName = GetNextName();
             if (newName != null)
             {
                 export.ObjectName = newName;
@@ -174,7 +188,7 @@ namespace Overdare.UScriptClass
             for (int i = 0; i < childrenArray.Length; i++)
             {
                 var child = childrenArray[i];
-                child.Save(parentExportIndex);
+                child.Save(parentExportIndex, outputPath);
                 if (child.SavingActor == null) throw new InvalidOperationException("SavingActor is required to save a LuaInstance");
                 luaChildrenValue[i] = new ObjectPropertyData()
                 {

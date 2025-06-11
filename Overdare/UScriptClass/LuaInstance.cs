@@ -29,7 +29,7 @@ namespace Overdare.UScriptClass
                 }
             }
         }
-        public string ClassName;
+        public string ClassName { get; init; }
         private Map? _mountedMap;
         public Map? Map
         {

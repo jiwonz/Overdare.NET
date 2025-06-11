@@ -7,12 +7,11 @@ namespace Overdare.UScriptClass
 {
     public class LuaFolder : LuaInstance
     {
-        private const string _ClassName = "LuaFolder";
         public SavedActor? RootComponent;
 
         public LuaFolder()
         {
-            ClassName = _ClassName;
+            ClassName = nameof(LuaFolder);
         }
 
         internal override void Save(int? parentExportIndex)
@@ -42,10 +41,10 @@ namespace Overdare.UScriptClass
                 bNotAlwaysLoadedForEditorGame = true,
                 Data = []
             };
-            var luaFolderClassName = Map.GetNextName(_ClassName);
+            var luaFolderClassName = Map.GetNextName(ClassName);
             NormalExport luaFolder = new(asset, [0, 0, 0, 0])
             {
-                ClassIndex = new(asset.SearchForImport(new FName(asset, _ClassName))),
+                ClassIndex = new(asset.SearchForImport(new FName(asset, ClassName))),
                 ObjectName = luaFolderClassName,
                 OuterIndex = FPackageIndex.FromExport(Map.LevelPackageIndex),
                 ObjectFlags = EObjectFlags.RF_Transactional,

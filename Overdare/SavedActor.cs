@@ -1,5 +1,4 @@
-﻿using Overdare.UScriptClass;
-using UAssetAPI;
+﻿using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.UnrealTypes;
 
@@ -9,17 +8,6 @@ namespace Overdare
     {
         public int ExportIndex;
         public NormalExport Export;
-
-        /// <summary>
-        /// Make and add a new NormalExport to the map.
-        /// </summary>
-        /// <param name="map"></param>
-        /// <param name="export"></param>
-        public SavedActor(Map map, NormalExport export)
-        {
-            ExportIndex = map.AddActor(export);
-            Export = export;
-        }
 
         public SavedActor(UAsset asset, int normalExportIndex)
         {
@@ -48,11 +36,6 @@ namespace Overdare
         public LoadedActor(Map map, FPackageIndex normalExportPackageIndex) : base(map.Asset, normalExportPackageIndex)
         {
             LinkedMap = map;
-        }
-
-        public void Unlink(LuaInstance instance)
-        {
-            LinkedMap.UnlinkedExportsAndInstances.Add(ExportIndex, instance);
         }
     }
 }

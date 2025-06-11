@@ -70,17 +70,30 @@ namespace Overdare.UScriptClass
                 if (Parent == this)
                     throw new InvalidOperationException($"Attempt to set as its own parent.");
 
+
+                if (SavingActor is LoadedActor loadedActor)
+                {
+                    if (value == null)
+                    {
+                        loadedActor.LinkedMap.UnlinkedExportsAndInstances.Add(loadedActor.ExportIndex, this);
+                    }
+                    else
+                    {
+                        loadedActor.LinkedMap.UnlinkedExportsAndInstances.Remove(loadedActor.ExportIndex);
+                    }
+                }
+
                 _parent?._children.Remove(this);
                 value?._children.Add(this);
                 _parent = value;
-                if (value?._mountedMap != null) Map = value._mountedMap;
+                Map = value?.Map;
             }
         }
         private readonly HashSet<LuaInstance> _children = [];
 
-        internal LuaInstance()
+        protected internal LuaInstance()
         {
-
+            ClassName = "";
         }
 
         public LuaInstance(LoadedActor loadedActor)
@@ -242,10 +255,6 @@ namespace Overdare.UScriptClass
         {
             Parent = null;
             ParentLocked = true;
-            if (SavingActor is LoadedActor loadedActor)
-            {
-                loadedActor.Unlink(this);
-            }
             //if (ExportReference != null)
             //{
             //    Map.DestroyedExportsIndexes.Add(ExportReference.NormalExportIndex);

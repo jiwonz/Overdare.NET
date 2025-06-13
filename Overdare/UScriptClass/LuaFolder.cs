@@ -12,10 +12,7 @@ namespace Overdare.UScriptClass
         private FPackageIndex? _sceneComponentClassIndex;
         internal FPackageIndex SceneComponentClassIndex
         {
-            get
-            {
-                return GetClassIndex(Map, "SceneComponent", ref _sceneComponentClassIndex);
-            }
+            get { return GetClassIndex(Map, "SceneComponent", ref _sceneComponentClassIndex); }
         }
 
         public LuaFolder()
@@ -49,7 +46,7 @@ namespace Overdare.UScriptClass
                 TemplateIndex = new(),
                 IsInheritedInstance = true,
                 bNotAlwaysLoadedForEditorGame = true,
-                Data = []
+                Data = [],
             };
             var luaFolderClassName = Map.GetNextName(ClassName);
             NormalExport luaFolder = new(asset, [0, 0, 0, 0])
@@ -73,31 +70,31 @@ namespace Overdare.UScriptClass
                         StructType = FName.FromString(asset, "Guid"),
                         SerializeNone = true,
                         StructGUID = Guid.Empty,
-                        Value = new List<PropertyData>()
-                        {
+                        Value =
+                        [
                             new GuidPropertyData()
                             {
                                 Name = FName.FromString(asset, "ActorGuid"),
-                                Value = Guid.NewGuid() // This generates a new GUID
-                            }
-                        }
+                                Value = Guid.NewGuid(), // This generates a new GUID
+                            },
+                        ],
                     },
                     new ObjectPropertyData()
                     {
                         Name = FName.FromString(asset, "RootComponent"),
-                        Value = rootComponentIndex
+                        Value = rootComponentIndex,
                     },
                     new BoolPropertyData()
                     {
                         Name = FName.FromString(asset, "bHidden"),
-                        Value = true
+                        Value = true,
                     },
                     new BoolPropertyData()
                     {
                         Name = FName.FromString(asset, "bActorEnableCollision"),
-                        Value = false
-                    }
-                ]
+                        Value = false,
+                    },
+                ],
             };
 
             asset.Exports.Add(rootComponent);
@@ -109,12 +106,19 @@ namespace Overdare.UScriptClass
             base.Save(parentExportIndex, outputPath);
         }
 
-        public LuaFolder(LoadedActor loadedActor) : base(loadedActor)
+        public LuaFolder(LoadedActor loadedActor)
+            : base(loadedActor)
         {
             if (loadedActor.Export["RootComponent"] is ObjectPropertyData rootComponentProp)
+            {
                 RootComponent = new LoadedActor(loadedActor.LinkedMap, rootComponentProp.Value);
+            }
             else
-                throw new Exception("LuaFolder export does not have RootComponent property. Which is unexpected.");
+            {
+                throw new Exception(
+                    "LuaFolder export does not have RootComponent property. Which is unexpected."
+                );
+            }
         }
     }
 }

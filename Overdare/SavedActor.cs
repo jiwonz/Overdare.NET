@@ -15,15 +15,25 @@ namespace Overdare
         public SavedActor(UAsset asset, int normalExportIndex)
         {
             ExportIndex = normalExportIndex;
-            Export = asset.Exports[normalExportIndex] as NormalExport ?? throw new InvalidCastException("Export at index is not a NormalExport.");
+            Export =
+                asset.Exports[normalExportIndex] as NormalExport
+                ?? throw new InvalidCastException("Export at index is not a NormalExport.");
         }
 
         public SavedActor(UAsset asset, FPackageIndex normalExportPackageIndex)
         {
             if (!normalExportPackageIndex.IsExport())
-                throw new ArgumentException("Provided FPackageIndex is not an export index.", nameof(normalExportPackageIndex));
+            {
+                throw new ArgumentException(
+                    "Provided FPackageIndex is not an export index.",
+                    nameof(normalExportPackageIndex)
+                );
+            }
+
             ExportIndex = normalExportPackageIndex.Index - 1;
-            Export = asset.Exports[ExportIndex] as NormalExport ?? throw new InvalidCastException("Export at index is not a NormalExport.");
+            Export =
+                asset.Exports[ExportIndex] as NormalExport
+                ?? throw new InvalidCastException("Export at index is not a NormalExport.");
         }
     }
 
@@ -31,12 +41,14 @@ namespace Overdare
     {
         internal readonly Map LinkedMap;
 
-        public LoadedActor(Map map, int normalExportIndex) : base(map.Asset, normalExportIndex)
+        public LoadedActor(Map map, int normalExportIndex)
+            : base(map.Asset, normalExportIndex)
         {
             LinkedMap = map;
         }
 
-        public LoadedActor(Map map, FPackageIndex normalExportPackageIndex) : base(map.Asset, normalExportPackageIndex)
+        public LoadedActor(Map map, FPackageIndex normalExportPackageIndex)
+            : base(map.Asset, normalExportPackageIndex)
         {
             LinkedMap = map;
         }

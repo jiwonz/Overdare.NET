@@ -17,7 +17,8 @@ namespace Overdare.UScriptClass
         {
             get
             {
-                if (_source != null) return _source;
+                if (_source != null)
+                    return _source;
                 if (SavingActor is LoadedActor loadedActor)
                 {
                     var sourcePath = TryGetSourceResources(loadedActor.Export).Path;
@@ -29,30 +30,32 @@ namespace Overdare.UScriptClass
                 }
                 return string.Empty;
             }
-            set
-            {
-                _source = value;
-            }
+            set { _source = value; }
         }
 
-        private (string? Path, FName? ObjectName) TryGetSourceResources(NormalExport export)
+        private static (string? Path, FName? ObjectName) TryGetSourceResources(NormalExport export)
         {
             var luaCode = export["LuaCode"];
-            if (luaCode is not ObjectPropertyData obj || !obj.Value.IsImport()) return (null, null);
+            if (luaCode is not ObjectPropertyData obj || !obj.Value.IsImport())
+                return (null, null);
 
             var asset = export.Asset;
             var import = obj.Value.ToImport(asset);
             var package = import.OuterIndex.ToImport(asset);
-            var sourcePath = package.ObjectName.ToString().Substring(6); // Remove "/User/"
+            var sourcePath = package.ObjectName.ToString()[6..]; // Remove "/User/"
             sourcePath = Path.ChangeExtension(sourcePath.FixDirectorySeparatorsForDisk(), "lua");
-            sourcePath = Path.Combine(Path.GetDirectoryName(asset.FilePath) ?? string.Empty, sourcePath);
+            sourcePath = Path.Combine(
+                Path.GetDirectoryName(asset.FilePath) ?? string.Empty,
+                sourcePath
+            );
             return (sourcePath, import.ObjectName);
         }
 
         private void TrySaveSource(NormalExport export)
         {
             var sourceResources = TryGetSourceResources(export);
-            if (string.IsNullOrEmpty(sourceResources.Path) || sourceResources.ObjectName == null) return;
+            if (string.IsNullOrEmpty(sourceResources.Path) || sourceResources.ObjectName == null)
+                return;
 
             var asset = CreateLuaCodeUAsset(sourceResources.ObjectName.ToString());
             var dir = Path.GetDirectoryName(sourceResources.Path);
@@ -64,36 +67,36 @@ namespace Overdare.UScriptClass
             asset.Write(Path.ChangeExtension(sourceResources.Path, "uasset"));
         }
 
-        private Stream? LuaCodeUAssetResource = Assembly.GetExecutingAssembly().GetManifestResourceStream("Overdare.Resources.LuaCode.uasset");
-        private UAsset CreateLuaCodeUAsset(string objectName)
+        private readonly Stream? LuaCodeUAssetResource = Assembly
+            .GetExecutingAssembly()
+            .GetManifestResourceStream("Overdare.Resources.LuaCode.uasset");
+
+        private UAsset CreateLuaCodeUAsset(string objectName) // objectName should be unique
         {
             UAsset asset = new()
             {
                 Mappings = null,
-                CustomSerializationFlags = CustomSerializationFlags.None
+                CustomSerializationFlags = CustomSerializationFlags.None,
             };
             asset.SetEngineVersion(SandboxMetadata.UnrealEngineVersion);
-            AssetBinaryReader reader = new(LuaCodeUAssetResource!)
-            {
-                Asset = asset
-            };
+            AssetBinaryReader reader = new(LuaCodeUAssetResource!) { Asset = asset };
             asset.Read(reader);
             asset.Exports[1].ObjectName = FName.FromString(asset, objectName); // The second export is the LuaCode export
-            byte[] hash = MD5.HashData(Encoding.UTF8.GetBytes(objectName));
-            string hex = BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
-            if (asset.Exports[2] is not MetaDataExport metaDataExport) throw new UnreachableException();
-            metaDataExport.RootMetaData[FName.FromString(asset, "PackageLocalizationNamespace")] = FString.FromString(hex);
+            var hash = MD5.HashData(Encoding.UTF8.GetBytes(objectName));
+            var hex = BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
+            if (asset.Exports[2] is not MetaDataExport metaDataExport)
+                throw new UnreachableException();
+            metaDataExport.RootMetaData[FName.FromString(asset, "PackageLocalizationNamespace")] =
+                FString.FromString(hex);
 
             return asset;
         }
 
-        protected internal BaseLuaScript() : base()
-        {
-        }
+        protected internal BaseLuaScript()
+            : base() { }
 
-        protected internal BaseLuaScript(LoadedActor loadedActor) : base(loadedActor)
-        {
-        }
+        protected internal BaseLuaScript(LoadedActor loadedActor)
+            : base(loadedActor) { }
 
         internal override void Save(int? parentExportIndex, string? outputPath)
         {
@@ -106,7 +109,11 @@ namespace Overdare.UScriptClass
 
             // Try to save a new LuaFolder because SavingActor was null
             if (Map == null)
-                throw new InvalidOperationException($"Cannot save a new {ClassName} without a Map.");
+            {
+                throw new InvalidOperationException(
+                    $"Cannot save a new {ClassName} without a Map."
+                );
+            }
 
             var asset = Map.Asset;
 
@@ -117,14 +124,30 @@ namespace Overdare.UScriptClass
             var packageIndex = FPackageIndex.FromImport(asset.Imports.Count);
             var luaCodeIndex = FPackageIndex.FromImport(asset.Imports.Count + 1);
             var newName = GetNextName() ?? luaScriptClassName;
-            asset.Imports.Add(new(FName.FromString(asset, "/Script/CoreUObject"), FName.FromString(asset, "Package"), new FPackageIndex(), FName.FromString(asset, "/User/Lua/" + newName.ToString()), false)
-            {
-                PackageName = FName.FromString(asset, "None")
-            });
-            asset.Imports.Add(new(FName.FromString(asset, "/Script/LuaMachine"), FName.FromString(asset, "LuaCode"), packageIndex, newName, false)
-            {
-                PackageName = FName.FromString(asset, "None")
-            });
+            asset.Imports.Add(
+                new(
+                    FName.FromString(asset, "/Script/CoreUObject"),
+                    FName.FromString(asset, "Package"),
+                    new FPackageIndex(),
+                    FName.FromString(asset, "/User/Lua/" + newName),
+                    false
+                )
+                {
+                    PackageName = FName.FromString(asset, "None"),
+                }
+            );
+            asset.Imports.Add(
+                new(
+                    FName.FromString(asset, "/Script/LuaMachine"),
+                    FName.FromString(asset, "LuaCode"),
+                    packageIndex,
+                    newName,
+                    false
+                )
+                {
+                    PackageName = FName.FromString(asset, "None"),
+                }
+            );
 
             luaScriptClassName = Map.GetNextName(ClassName);
             NormalExport luaScript = new(asset, [0, 0, 0, 0])
@@ -141,7 +164,7 @@ namespace Overdare.UScriptClass
                     new ObjectPropertyData()
                     {
                         Name = FName.FromString(asset, "LuaCode"),
-                        Value = luaCodeIndex
+                        Value = luaCodeIndex,
                     },
                     new StrPropertyData()
                     {
@@ -154,26 +177,26 @@ namespace Overdare.UScriptClass
                         StructType = FName.FromString(asset, "Guid"),
                         SerializeNone = true,
                         StructGUID = Guid.Empty,
-                        Value = new List<PropertyData>()
-                        {
+                        Value =
+                        [
                             new GuidPropertyData()
                             {
                                 Name = FName.FromString(asset, "ActorGuid"),
-                                Value = Guid.NewGuid()
-                            }
-                        }
+                                Value = Guid.NewGuid(),
+                            },
+                        ],
                     },
                     new BoolPropertyData()
                     {
                         Name = FName.FromString(asset, "bHidden"),
-                        Value = true
+                        Value = true,
                     },
                     new BoolPropertyData()
                     {
                         Name = FName.FromString(asset, "bActorEnableCollision"),
-                        Value = false
-                    }
-                ]
+                        Value = false,
+                    },
+                ],
             };
 
             Map.AddActor(luaScript);

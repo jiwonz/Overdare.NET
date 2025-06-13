@@ -10,22 +10,26 @@ namespace Overdare
     {
         internal readonly UAsset Asset;
         public LuaInstance LuaDataModel;
-        internal Dictionary<int, LuaInstance> UnlinkedExportsAndInstances = new();
+        internal Dictionary<int, LuaInstance> UnlinkedExportsAndInstances = [];
         internal int LevelPackageIndex;
-        private LevelExport _level;
+        private readonly LevelExport _level;
 
         private LuaInstance? TryLoadLuaDataModel()
         {
             foreach (var actorPackageIndex in _level.Actors)
             {
                 LoadedActor objRef = new(this, actorPackageIndex);
-                if (objRef == null) continue;
+                if (objRef == null)
+                    continue;
                 var normalExport = objRef.Export;
                 var classType = normalExport.GetExportClassType();
-                if (classType == null) continue;
+                if (classType == null)
+                    continue;
                 var classTypeName = classType.Value;
-                if (classTypeName == null) continue;
-                if (classTypeName.Value == "LuaDataModel") return LoadIntoLuaInstance(objRef);
+                if (classTypeName == null)
+                    continue;
+                if (classTypeName.Value == "LuaDataModel")
+                    return LoadIntoLuaInstance(objRef);
             }
             return null;
         }
@@ -34,12 +38,15 @@ namespace Overdare
         /// Load a LuaInstance from a NormalExport.
         /// Especially useful for LuaDataModel exports from UAsset.
         /// </summary>
-        /// <param name="export"></param>
+        /// <param name="loadedActor"></param>
         private LuaInstance LoadIntoLuaInstance(LoadedActor loadedActor)
         {
             var export = loadedActor.Export;
-            var classType = export.GetExportClassType() ?? throw new Exception("Export does not have a class type.");
-            var classTypeName = classType.Value ?? throw new Exception("Export class type name is null.");
+            var classType =
+                export.GetExportClassType()
+                ?? throw new Exception("Export does not have a class type.");
+            var classTypeName =
+                classType.Value ?? throw new Exception("Export class type name is null.");
 
             var luaInstance = LuaInstance.CreateFromClassName(classTypeName.Value, loadedActor);
             luaInstance.Map = this;
@@ -48,9 +55,11 @@ namespace Overdare
             {
                 foreach (var child in childrenArr.Value)
                 {
-                    if (child is not ObjectPropertyData objProp) continue;
+                    if (child is not ObjectPropertyData objProp)
+                        continue;
                     LoadedActor childObjRef = new(this, objProp.Value);
-                    if (childObjRef == null) continue;
+                    if (childObjRef == null)
+                        continue;
                     var childInstance = LoadIntoLuaInstance(childObjRef);
                     childInstance.Parent = luaInstance;
                 }
@@ -78,11 +87,9 @@ namespace Overdare
                 throw new Exception("Map does not contain a LevelExport export.");
             }
             _level = level;
-            var luaDataModel = TryLoadLuaDataModel();
-            if (luaDataModel == null)
-            {
-                throw new Exception("Map does not contain a LuaDataModel export.");
-            }
+            var luaDataModel =
+                TryLoadLuaDataModel()
+                ?? throw new Exception("Map does not contain a LuaDataModel export.");
             LuaDataModel = luaDataModel;
         }
 
@@ -97,7 +104,7 @@ namespace Overdare
             UAsset asset = new()
             {
                 Mappings = null,
-                CustomSerializationFlags = CustomSerializationFlags.None
+                CustomSerializationFlags = CustomSerializationFlags.None,
             };
             asset.SetEngineVersion(SandboxMetadata.UnrealEngineVersion);
             reader.Asset = asset;
@@ -129,8 +136,10 @@ namespace Overdare
             for (int i = _level.Actors.Count - 1; i >= 0; i--)
             {
                 var actorPackageIndex = _level.Actors[i];
-                if (!actorPackageIndex.IsExport()) continue;
-                if (UnlinkedExportsAndInstances.ContainsKey(actorPackageIndex.Index - 1)) _level.Actors.RemoveAt(i);
+                if (!actorPackageIndex.IsExport())
+                    continue;
+                if (UnlinkedExportsAndInstances.ContainsKey(actorPackageIndex.Index - 1))
+                    _level.Actors.RemoveAt(i);
             }
             Asset.Write(path);
         }

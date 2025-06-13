@@ -11,8 +11,12 @@ namespace Overdare.UScriptClass
         {
             get
             {
-                if (_customName != null && _customName.Length > 0) return _customName;
-                if (SavingActor is LoadedActor loadedActor && loadedActor.Export["Name"] is StrPropertyData strProp)
+                if (_customName?.Length > 0)
+                    return _customName;
+                if (
+                    SavingActor is LoadedActor loadedActor
+                    && loadedActor.Export["Name"] is StrPropertyData strProp
+                )
                 {
                     return strProp.Value.Value;
                 }
@@ -20,7 +24,7 @@ namespace Overdare.UScriptClass
             }
             set
             {
-                if (value != null && value.Length > 0)
+                if (value?.Length > 0)
                 {
                     _customName = value;
                 }
@@ -32,10 +36,16 @@ namespace Overdare.UScriptClass
         }
         public string ClassName { get; init; }
 
-        internal static FPackageIndex GetClassIndex(Map? mapProp, string className, ref FPackageIndex? classIndexProp)
+        internal static FPackageIndex GetClassIndex(
+            Map? mapProp,
+            string className,
+            ref FPackageIndex? classIndexProp
+        )
         {
-            if (classIndexProp != null) return classIndexProp;
-            if (mapProp == null) throw new InvalidOperationException("Cannot get ClassIndex without Map");
+            if (classIndexProp != null)
+                return classIndexProp;
+            if (mapProp == null)
+                throw new InvalidOperationException("Cannot get ClassIndex without Map");
             var asset = mapProp.Asset;
             var foundIndex = asset.SearchForImport(FName.FromString(asset, className));
             Console.WriteLine($"{className} {foundIndex}");
@@ -49,23 +59,29 @@ namespace Overdare.UScriptClass
                 }
             }
             foundIndex = asset.SearchForImport(FName.FromString(asset, "/Script/LuaAPI"));
-            if (foundIndex == 0) throw new UnreachableException();
+            if (foundIndex == 0)
+                throw new UnreachableException();
             Console.WriteLine($"{className} {foundIndex}");
             classIndexProp = FPackageIndex.FromImport(asset.Imports.Count);
-            asset.Imports.Add(new(FName.FromString(asset, "/Script/CoreUObject"), FName.FromString(asset, "Class"), new(foundIndex), FName.FromString(asset, className), false)
-            {
-                PackageName = FName.FromString(asset, "None")
-            });
+            asset.Imports.Add(
+                new(
+                    FName.FromString(asset, "/Script/CoreUObject"),
+                    FName.FromString(asset, "Class"),
+                    new(foundIndex),
+                    FName.FromString(asset, className),
+                    false
+                )
+                {
+                    PackageName = FName.FromString(asset, "None"),
+                }
+            );
             return classIndexProp;
         }
 
         private FPackageIndex? _classIndex;
         internal FPackageIndex ClassIndex
         {
-            get
-            {
-                return GetClassIndex(Map, ClassName, ref _classIndex);
-            }
+            get { return GetClassIndex(Map, ClassName, ref _classIndex); }
         }
         private Map? _mountedMap;
         public Map? Map
@@ -80,8 +96,10 @@ namespace Overdare.UScriptClass
                 _mountedMap = value;
             }
         }
+
         // TO-DO: This can be improved by adding a default Export like LuaModel or something.
         public SavedActor? SavingActor;
+
         /// <summary>
         /// For already saved exports from the current asset.
         /// They're going to be null'ed then re-added when the instance is saved again.
@@ -96,27 +114,35 @@ namespace Overdare.UScriptClass
             {
                 if (ParentLocked)
                 {
-                    throw new InvalidOperationException("Cannot change ParentLocked instance's parent. This instance might be destroyed already.");
+                    throw new InvalidOperationException(
+                        "Cannot change ParentLocked instance's parent. This instance might be destroyed already."
+                    );
                 }
 
                 if (IsAncestorOf(value))
                 {
-                    throw new InvalidOperationException($"Attempt to set parent to an instance that would result in circular reference.");
+                    throw new InvalidOperationException(
+                        "Attempt to set parent to an instance that would result in circular reference."
+                    );
                 }
 
                 if (Parent == this)
-                    throw new InvalidOperationException($"Attempt to set as its own parent.");
-
+                    throw new InvalidOperationException("Attempt to set as its own parent.");
 
                 if (SavingActor is LoadedActor loadedActor)
                 {
                     if (value == null)
                     {
-                        loadedActor.LinkedMap.UnlinkedExportsAndInstances.Add(loadedActor.ExportIndex, this);
+                        loadedActor.LinkedMap.UnlinkedExportsAndInstances.Add(
+                            loadedActor.ExportIndex,
+                            this
+                        );
                     }
                     else
                     {
-                        loadedActor.LinkedMap.UnlinkedExportsAndInstances.Remove(loadedActor.ExportIndex);
+                        loadedActor.LinkedMap.UnlinkedExportsAndInstances.Remove(
+                            loadedActor.ExportIndex
+                        );
                     }
                 }
 
@@ -128,6 +154,31 @@ namespace Overdare.UScriptClass
         }
         private readonly HashSet<LuaInstance> _children = [];
 
+        /// <summary>
+        /// Use `GetChildren()` to collect children instead of this property. This property meant to be set the initial children.
+        /// </summary>
+        public LuaInstance[] Children
+        {
+            set
+            {
+                if (ParentLocked)
+                {
+                    throw new InvalidOperationException(
+                        "Cannot change ParentLocked instance's children. This instance might be destroyed already."
+                    );
+                }
+                _children.Clear();
+                foreach (var child in value)
+                {
+                    if (child.Parent != this)
+                    {
+                        child.Parent = this;
+                    }
+                    _children.Add(child);
+                }
+            }
+        }
+
         protected internal LuaInstance()
         {
             ClassName = "";
@@ -137,34 +188,40 @@ namespace Overdare.UScriptClass
         {
             SavingActor = loadedActor;
             Map = loadedActor.LinkedMap;
-            var classType = loadedActor.Export.GetExportClassType();
-            if (classType == null) throw new InvalidOperationException("Export does not have a class type.");
-            ClassName = classType.Value?.Value ?? throw new InvalidOperationException("Export class type name is null.");
+            var classType =
+                loadedActor.Export.GetExportClassType()
+                ?? throw new InvalidOperationException("Export does not have a class type.");
+            ClassName =
+                classType.Value?.Value
+                ?? throw new InvalidOperationException("Export class type name is null.");
         }
 
-        public static LuaInstance? CreateFromClassName(string className) => className switch
-        {
-            "LuaFolder" => new LuaFolder(),
-            "LuaScript" => new LuaScript(),
-            "LuaModuleScript" => new LuaModuleScript(),
-            "LuaLocalScript" => new LuaLocalScript(),
-            _ => null,
-        };
+        public static LuaInstance? CreateFromClassName(string className) =>
+            className switch
+            {
+                "LuaFolder" => new LuaFolder(),
+                "LuaScript" => new LuaScript(),
+                "LuaModuleScript" => new LuaModuleScript(),
+                "LuaLocalScript" => new LuaLocalScript(),
+                _ => null,
+            };
 
-        public static LuaInstance CreateFromClassName(string className, LoadedActor loadedActor) => className switch
-        {
-            "LuaFolder" => new LuaFolder(loadedActor),
-            "LuaScript" => new LuaScript(loadedActor),
-            "LuaModuleScript" => new LuaModuleScript(loadedActor),
-            "LuaLocalScript" => new LuaLocalScript(loadedActor),
-            _ => new LuaInstance(loadedActor),
-        };
+        public static LuaInstance CreateFromClassName(string className, LoadedActor loadedActor) =>
+            className switch
+            {
+                "LuaFolder" => new LuaFolder(loadedActor),
+                "LuaScript" => new LuaScript(loadedActor),
+                "LuaModuleScript" => new LuaModuleScript(loadedActor),
+                "LuaLocalScript" => new LuaLocalScript(loadedActor),
+                _ => new LuaInstance(loadedActor),
+            };
 
         internal FName? GetNextName()
         {
-            if (Map == null) throw new InvalidOperationException("Map is required to get a next FName.");
+            if (Map == null)
+                throw new InvalidOperationException("Map is required to get a next FName.");
             FName? newName = null;
-            if (_customName != null && _customName.Length > 0)
+            if (_customName?.Length > 0)
             {
                 newName = Map.GetNextName(_customName);
             }
@@ -185,11 +242,20 @@ namespace Overdare.UScriptClass
 
         internal virtual void Save(int? parentExportIndex, string? outputPath)
         {
-            if (Map == null) throw new InvalidOperationException("Map is required to save a LuaInstance.");
-            if (SavingActor == null) throw new InvalidOperationException("SavingActor is required to save a LuaInstance");
+            if (Map == null)
+                throw new InvalidOperationException("Map is required to save a LuaInstance.");
+            if (SavingActor == null)
+            {
+                throw new InvalidOperationException(
+                    "SavingActor is required to save a LuaInstance"
+                );
+            }
+
             if (SavingActor is LoadedActor loadedActor && loadedActor.LinkedMap != Map)
             {
-                throw new InvalidOperationException("SavingActor is a LoadedActor from a different Map, cannot save LuaInstance.");
+                throw new InvalidOperationException(
+                    "SavingActor is a LoadedActor from a different Map, cannot save LuaInstance."
+                );
             }
             var export = SavingActor.Export;
             var asset = export.Asset;
@@ -214,7 +280,7 @@ namespace Overdare.UScriptClass
                 export["Parent"] = new ObjectPropertyData()
                 {
                     Name = FName.FromString(asset, "Parent"),
-                    Value = FPackageIndex.FromExport(parentExportIndex.Value)
+                    Value = FPackageIndex.FromExport(parentExportIndex.Value),
                 };
             }
 
@@ -226,14 +292,20 @@ namespace Overdare.UScriptClass
             {
                 var child = childrenArray[i];
                 child.Save(parentExportIndex, outputPath);
-                if (child.SavingActor == null) throw new InvalidOperationException("SavingActor is required to save a LuaInstance");
+                if (child.SavingActor == null)
+                {
+                    throw new InvalidOperationException(
+                        "SavingActor is required to save a LuaInstance"
+                    );
+                }
+
                 luaChildrenValue[i] = new ObjectPropertyData()
                 {
                     Name = FName.FromString(asset, i.ToString()),
-                    Value = FPackageIndex.FromExport(child.SavingActor.ExportIndex)
+                    Value = FPackageIndex.FromExport(child.SavingActor.ExportIndex),
                 };
             }
-            if (childrenArray.Length <= 0)
+            if (childrenArray.Length == 0)
             {
                 for (int i = export.Data.Count - 1; i >= 0; i--)
                 {
@@ -248,20 +320,29 @@ namespace Overdare.UScriptClass
                 SavingActor.Export["LuaChildren"] = new ArrayPropertyData()
                 {
                     Name = FName.FromString(asset, "LuaChildren"),
-                    Value = luaChildrenValue
+                    Value = luaChildrenValue,
                 };
             }
         }
 
         internal void Unlink()
         {
-            if (SavingActor == null) throw new InvalidOperationException("SavingActor is required to save a LuaInstance");
+            if (SavingActor == null)
+            {
+                throw new InvalidOperationException(
+                    "SavingActor is required to save a LuaInstance"
+                );
+            }
+
             var export = SavingActor.Export;
             var asset = export.Asset;
             for (int i = export.Data.Count - 1; i >= 0; i--)
             {
                 var name = export.Data[i].Name;
-                if (name == FName.FromString(asset, "LuaChildren") || name == FName.FromString(asset, "Parent"))
+                if (
+                    name == FName.FromString(asset, "LuaChildren")
+                    || name == FName.FromString(asset, "Parent")
+                )
                 {
                     export.Data.RemoveAt(i);
                 }
@@ -299,7 +380,7 @@ namespace Overdare.UScriptClass
                 results.AddRange(descendants);
             }
 
-            return results.ToArray();
+            return [.. results];
         }
 
         public void Destroy()

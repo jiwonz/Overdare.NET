@@ -2,19 +2,23 @@
 
 namespace Overdare
 {
-    internal class Example
+    internal static class Example
     {
         private static void PrintInstance(LuaInstance instance, int indent = 0)
         {
-            var source = instance is BaseLuaScript luaScript ? $" (source: {luaScript.Source})" : "";
-            Console.WriteLine($"{new string(' ', indent)}{instance.ClassName} {instance.Name}{source}");
+            var source = instance is BaseLuaScript luaScript
+                ? $" (source: {luaScript.Source})"
+                : "";
+            Console.WriteLine(
+                $"{new string(' ', indent)}{instance.ClassName} {instance.Name}{source}"
+            );
             foreach (var child in instance.GetChildren())
             {
                 PrintInstance(child, indent + 2);
             }
         }
 
-        private static void Main(string[] args)
+        private static void Main()
         {
             var map = Map.Open("input.umap");
             //Console.WriteLine(JsonConvert.SerializeObject(map.LuaDataModel.GetDescendants().Select(x => x.ClassName), Formatting.Indented));
@@ -22,39 +26,40 @@ namespace Overdare
             var folder = workspace?.FindFirstChildOfClass("LuaFolder");
             Console.WriteLine($"folder: {folder}");
             folder?.Destroy();
-            LuaScript script = new()
+            LuaScript _ = new()
             {
                 Source = "print('Hello, world!')\n",
                 Name = "HelloWorldScript",
                 Parent = workspace,
-            };
-            new LuaModuleScript()
-            {
-                Source = "return { apple = true }\n",
-                Name = "Apple",
-                Parent = script,
-            };
-            new LuaModuleScript()
-            {
-                Source = "return { hello = function() print('hallo') end }\n",
-                Name = "Hello",
-                Parent = script,
-            };
-            LuaModuleScript lib = new()
-            {
-                Source = "return { dep = require(script.Dependency) }\n",
-                Name = "Dependency",
-                Parent = new LuaModuleScript()
-                {
-                    Source = "return { hello = function() print('hallo') end }\n",
-                    Name = "Package",
-                    Parent = script,
-                }
-            };
-            new LuaLocalScript()
-            {
-                Source = "print('This is a local script')\n",
-                Parent = lib,
+                Children =
+                [
+                    new LuaModuleScript() { Source = "return { apple = true }\n", Name = "Apple" },
+                    new LuaModuleScript()
+                    {
+                        Source = "return { hello = function() print('hallo') end }\n",
+                        Name = "Hello",
+                    },
+                    new LuaModuleScript()
+                    {
+                        Source = "return { hello = function() print('hallo') end }\n",
+                        Name = "Package",
+                        Children =
+                        [
+                            new LuaModuleScript()
+                            {
+                                Source = "return { dep = require(script.Dependency) }\n",
+                                Name = "Dependency",
+                                Children =
+                                [
+                                    new LuaLocalScript()
+                                    {
+                                        Source = "print('This is a local script')\n",
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
             };
             PrintInstance(map.LuaDataModel);
             map.Save("out.umap");

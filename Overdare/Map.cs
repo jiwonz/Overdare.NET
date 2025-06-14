@@ -122,12 +122,6 @@ namespace Overdare
             return map;
         }
 
-        public void Write(Stream stream)
-        {
-            using var writeData = Asset.WriteData();
-            writeData.CopyTo(stream);
-        }
-
         public MemoryStream WriteData()
         {
             return Asset.WriteData();

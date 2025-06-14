@@ -35,6 +35,17 @@ namespace Overdare.UScriptClass
             }
         }
         public string ClassName { get; init; }
+        public bool VisibleInLevelBrowser
+        {
+            get
+            {
+                if (SavingActor?.Export["bVisibleInLevelBrowser"] is BoolPropertyData prop)
+                {
+                    return prop.Value;
+                }
+                return false;
+            }
+        }
 
         internal static FPackageIndex GetClassIndex(
             Map? mapProp,
@@ -98,7 +109,7 @@ namespace Overdare.UScriptClass
         }
 
         // TO-DO: This can be improved by adding a default Export like LuaModel or something.
-        public SavedActor? SavingActor;
+        public SavedActor? SavingActor { get; internal set; }
 
         /// <summary>
         /// For already saved exports from the current asset.

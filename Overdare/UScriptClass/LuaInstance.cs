@@ -104,7 +104,6 @@ namespace Overdare.UScriptClass
         /// For already saved exports from the current asset.
         /// They're going to be null'ed then re-added when the instance is saved again.
         /// </summary>
-        //internal FPackageIndex? _savedExportIndex;
         public bool ParentLocked { get; internal set; }
         private LuaInstance? _parent;
         public LuaInstance? Parent
@@ -387,20 +386,6 @@ namespace Overdare.UScriptClass
         {
             Parent = null;
             ParentLocked = true;
-            //if (ExportReference != null)
-            //{
-            //    Map.DestroyedExportsIndexes.Add(ExportReference.NormalExportIndex);
-            //    var packageIndex = ExportReference.ToPackageIndex();
-            //    for (int i = 0; i < Map.Asset.Exports.Count; i++)
-            //    {
-            //        if (Map.Asset.Exports[i].OuterIndex.Index == packageIndex.Index)
-            //        {
-            //            Console.WriteLine("You died too");
-            //            Map.DestroyedExportsIndexes.Add(i);
-            //        }
-            //    }
-            //}
-            //_destroyed = true;
             while (_children.Count != 0)
             {
                 var child = _children.First();

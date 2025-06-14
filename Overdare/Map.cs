@@ -126,6 +126,24 @@ namespace Overdare
             return map;
         }
 
+        public void Write(BinaryWriter writer)
+        {
+            using var stream = Asset.WriteData();
+            stream.Position = 0;
+            stream.CopyTo(writer.BaseStream);
+        }
+
+        public void Write(Stream stream)
+        {
+            using BinaryWriter writer = new(stream);
+            Write(writer);
+        }
+
+        public MemoryStream WriteData()
+        {
+            return Asset.WriteData();
+        }
+
         public void Save(string path)
         {
             LuaDataModel.Save(null, path);

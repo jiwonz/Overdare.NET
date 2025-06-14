@@ -110,11 +110,7 @@ namespace Overdare
             return asset;
         }
 
-        public Map(AssetBinaryReader reader) : this(UAssetFromReader(reader))
-        {
-        }
-
-        public Map(Stream stream) : this(new AssetBinaryReader(stream))
+        public Map(Stream stream) : this(UAssetFromReader(new AssetBinaryReader(stream)))
         {
         }
 

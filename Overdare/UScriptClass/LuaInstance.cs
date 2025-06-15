@@ -6,6 +6,17 @@ namespace Overdare.UScriptClass
 {
     public class LuaInstance
     {
+        virtual internal bool NotCreatable => true;
+        public ClassTagFlags ClassTagFlags
+        {
+            get
+            {
+                var flags = ClassTagFlags.None;
+                if (SavingActor?.Export["bVisibleInLevelBrowser"] is BoolPropertyData prop && prop.Value) flags |= ClassTagFlags.VisibleInLevelBrowser;
+                if (NotCreatable) flags |= ClassTagFlags.NotCreatable;
+                return flags;
+            }
+        }
         private string? _customName;
         public string? Name
         {
@@ -35,17 +46,6 @@ namespace Overdare.UScriptClass
             }
         }
         public string ClassName { get; init; }
-        public bool VisibleInLevelBrowser
-        {
-            get
-            {
-                if (SavingActor?.Export["bVisibleInLevelBrowser"] is BoolPropertyData prop)
-                {
-                    return prop.Value;
-                }
-                return false;
-            }
-        }
 
         internal static FPackageIndex GetClassIndex(
             Map? mapProp,
@@ -439,5 +439,13 @@ namespace Overdare.UScriptClass
             }
             return null;
         }
+    }
+
+    [Flags]
+    public enum ClassTagFlags
+    {
+        None = 0,
+        VisibleInLevelBrowser = 1,
+        NotCreatable = 2,
     }
 }

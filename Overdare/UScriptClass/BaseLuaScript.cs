@@ -12,6 +12,7 @@ namespace Overdare.UScriptClass
 {
     public class BaseLuaScript : LuaInstance
     {
+        internal override bool NotCreatable => false;
         private string? _source;
         public string Source
         {

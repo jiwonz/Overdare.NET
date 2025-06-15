@@ -7,6 +7,7 @@ namespace Overdare.UScriptClass
 {
     public class LuaFolder : LuaInstance
     {
+        internal override bool NotCreatable => false;
         public SavedActor? RootComponent;
 
         private FPackageIndex? _sceneComponentClassIndex;

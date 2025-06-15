@@ -12,7 +12,7 @@ namespace Overdare.UScriptClass
             get
             {
                 var flags = ClassTagFlags.None;
-                if (SavingActor?.Export["bVisibleInLevelBrowser"] is BoolPropertyData prop && prop.Value) flags |= ClassTagFlags.VisibleInLevelBrowser;
+                if (SavingActor?.Export["bVisibleInLevelBrowser"] is BoolPropertyData prop && !prop.Value) flags |= ClassTagFlags.NotBrowsable;
                 if (NotCreatable) flags |= ClassTagFlags.NotCreatable;
                 return flags;
             }
@@ -445,7 +445,7 @@ namespace Overdare.UScriptClass
     public enum ClassTagFlags
     {
         None = 0,
-        VisibleInLevelBrowser = 1,
+        NotBrowsable = 1,
         NotCreatable = 2,
     }
 }

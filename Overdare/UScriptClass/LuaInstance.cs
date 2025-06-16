@@ -59,7 +59,7 @@ namespace Overdare.UScriptClass
                 throw new InvalidOperationException("Cannot get ClassIndex without Map");
             var asset = mapProp.Asset;
             var foundIndex = asset.SearchForImport(FName.FromString(asset, className));
-            Console.WriteLine($"{className} {foundIndex}");
+            //Console.WriteLine($"{className} {foundIndex}");
             if (foundIndex != 0 && foundIndex < 0)
             {
                 FPackageIndex foundClass = new(foundIndex);
@@ -72,7 +72,7 @@ namespace Overdare.UScriptClass
             foundIndex = asset.SearchForImport(FName.FromString(asset, "/Script/LuaAPI"));
             if (foundIndex == 0)
                 throw new UnreachableException();
-            Console.WriteLine($"{className} {foundIndex}");
+            //Console.WriteLine($"{className} {foundIndex}");
             classIndexProp = FPackageIndex.FromImport(asset.Imports.Count);
             asset.Imports.Add(
                 new(

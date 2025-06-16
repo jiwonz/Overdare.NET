@@ -442,6 +442,15 @@ namespace Overdare.UScriptClass
             }
             return null;
         }
+
+        public string GetFullName()
+        {
+            if (Parent == null)
+            {
+                return Name ?? "Root";
+            }
+            return $"{Parent.GetFullName()}.{Name}";
+        }
     }
 
     [Flags]

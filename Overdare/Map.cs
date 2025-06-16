@@ -95,12 +95,13 @@ namespace Overdare
         {
         }
 
-        private static UAsset UAssetFromReader(AssetBinaryReader reader)
+        private static UAsset UAssetFromReader(AssetBinaryReader reader, string? filePath)
         {
             UAsset asset = new()
             {
                 Mappings = null,
                 CustomSerializationFlags = CustomSerializationFlags.None,
+                FilePath = filePath
             };
             asset.SetEngineVersion(SandboxMetadata.UnrealEngineVersion);
             reader.Asset = asset;
@@ -108,15 +109,22 @@ namespace Overdare
             return asset;
         }
 
-        public Map(Stream stream) : this(UAssetFromReader(new AssetBinaryReader(stream)))
+        public Map(Stream stream) : this(UAssetFromReader(new AssetBinaryReader(stream), null))
+        {
+        }
+
+        public Map(byte[] buffer, string filePath) : this(new MemoryStream(buffer), filePath)
+        {
+        }
+
+        public Map(Stream stream, string filePath) : this(UAssetFromReader(new AssetBinaryReader(stream), filePath))
         {
         }
 
         public static Map Open(string path)
         {
             byte[] buffer = File.ReadAllBytes(path);
-            Map map = new(buffer);
-            map.Asset.FilePath = path;
+            Map map = new(buffer, path);
             return map;
         }
 

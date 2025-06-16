@@ -447,9 +447,9 @@ namespace Overdare.UScriptClass
         {
             if (Parent == null)
             {
-                return Name ?? "Root";
+                return Name ?? "(DataModel)";
             }
-            return $"{Parent.GetFullName()}.{Name}";
+            return $"{Parent.GetFullName()}.{Name ?? ClassName}";
         }
     }
 

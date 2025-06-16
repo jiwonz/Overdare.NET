@@ -13,26 +13,7 @@ namespace Overdare.UScriptClass
     public class BaseLuaScript : LuaInstance
     {
         internal override bool NotCreatable => false;
-        private string? _source;
-        public string Source
-        {
-            get
-            {
-                if (_source != null)
-                    return _source;
-                if (SavingActor is LoadedActor loadedActor)
-                {
-                    var sourcePath = TryGetSourceResources(loadedActor.Export).Path;
-                    if (sourcePath != null && File.Exists(sourcePath))
-                    {
-                        _source = File.ReadAllText(sourcePath);
-                        return _source;
-                    }
-                }
-                return string.Empty;
-            }
-            set { _source = value; }
-        }
+        public string Source = string.Empty;
 
         private static (string? Path, FName? ObjectName) TryGetSourceResources(NormalExport export)
         {
@@ -96,14 +77,21 @@ namespace Overdare.UScriptClass
         protected internal BaseLuaScript()
             : base() { }
 
-        protected internal BaseLuaScript(LoadedActor loadedActor)
-            : base(loadedActor) { }
+        protected internal BaseLuaScript(SavedActor savedActor)
+            : base(savedActor)
+        {
+            var sourcePath = TryGetSourceResources(savedActor.Export).Path;
+            if (sourcePath != null && File.Exists(sourcePath))
+            {
+                Source = File.ReadAllText(sourcePath);
+            }
+        }
 
         internal override void Save(int? parentExportIndex, string? outputPath)
         {
-            if (SavingActor != null)
+            if (SavedActor != null)
             {
-                TrySaveSource(SavingActor.Export);
+                TrySaveSource(SavedActor.Export);
                 base.Save(parentExportIndex, outputPath);
                 return;
             }
@@ -202,8 +190,8 @@ namespace Overdare.UScriptClass
 
             Map.AddActor(luaScript);
 
-            SavingActor = new(asset, luaScriptIndex);
-            TrySaveSource(SavingActor.Export);
+            SavedActor = new(Map, luaScriptIndex);
+            TrySaveSource(SavedActor.Export);
 
             base.Save(parentExportIndex, outputPath);
         }

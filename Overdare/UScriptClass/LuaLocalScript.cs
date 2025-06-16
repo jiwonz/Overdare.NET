@@ -7,7 +7,7 @@
             ClassName = nameof(LuaLocalScript);
         }
 
-        public LuaLocalScript(LoadedActor loadedActor)
-            : base(loadedActor) { }
+        public LuaLocalScript(SavedActor savedActor)
+            : base(savedActor) { }
     }
 }

@@ -18,10 +18,8 @@ namespace Overdare
         {
             foreach (var actorPackageIndex in _level.Actors)
             {
-                LoadedActor objRef = new(this, actorPackageIndex);
-                if (objRef == null)
-                    continue;
-                var normalExport = objRef.Export;
+                SavedActor savedActor = new(this, actorPackageIndex);
+                var normalExport = savedActor.Export;
                 var classType = normalExport.GetExportClassType();
                 if (classType == null)
                     continue;
@@ -29,7 +27,7 @@ namespace Overdare
                 if (classTypeName == null)
                     continue;
                 if (classTypeName.Value == "LuaDataModel")
-                    return LoadIntoLuaInstance(objRef);
+                    return LoadIntoLuaInstance(savedActor);
             }
             return null;
         }
@@ -38,17 +36,17 @@ namespace Overdare
         /// Load a LuaInstance from a NormalExport.
         /// Especially useful for LuaDataModel exports from UAsset.
         /// </summary>
-        /// <param name="loadedActor"></param>
-        private LuaInstance LoadIntoLuaInstance(LoadedActor loadedActor)
+        /// <param name="savedActor"></param>
+        private LuaInstance LoadIntoLuaInstance(SavedActor savedActor)
         {
-            var export = loadedActor.Export;
+            var export = savedActor.Export;
             var classType =
                 export.GetExportClassType()
                 ?? throw new Exception("Export does not have a class type.");
             var classTypeName =
                 classType.Value ?? throw new Exception("Export class type name is null.");
 
-            var luaInstance = LuaInstance.CreateFromClassName(classTypeName.Value, loadedActor);
+            var luaInstance = LuaInstance.CreateFromClassName(classTypeName.Value, savedActor);
             luaInstance.Map = this;
 
             if (export["LuaChildren"] is ArrayPropertyData childrenArr)
@@ -57,7 +55,7 @@ namespace Overdare
                 {
                     if (child is not ObjectPropertyData objProp)
                         continue;
-                    LoadedActor childObjRef = new(this, objProp.Value);
+                    SavedActor childObjRef = new(this, objProp.Value);
                     if (childObjRef == null)
                         continue;
                     var childInstance = LoadIntoLuaInstance(childObjRef);

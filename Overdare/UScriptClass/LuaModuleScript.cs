@@ -7,7 +7,7 @@
             ClassName = nameof(LuaModuleScript);
         }
 
-        public LuaModuleScript(LoadedActor loadedActor)
-            : base(loadedActor) { }
+        public LuaModuleScript(SavedActor savedActor)
+            : base(savedActor) { }
     }
 }

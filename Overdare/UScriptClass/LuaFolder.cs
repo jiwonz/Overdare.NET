@@ -23,7 +23,7 @@ namespace Overdare.UScriptClass
 
         internal override void Save(int? parentExportIndex, string? outputPath)
         {
-            if (SavingActor != null)
+            if (SavedActor != null)
             {
                 base.Save(parentExportIndex, outputPath);
                 return;
@@ -101,18 +101,18 @@ namespace Overdare.UScriptClass
             asset.Exports.Add(rootComponent);
             Map.AddActor(luaFolder);
 
-            RootComponent = new(asset, rootComponentIndex);
-            SavingActor = new(asset, luaFolderIndex);
+            RootComponent = new(Map, rootComponentIndex);
+            SavedActor = new(Map, luaFolderIndex);
 
             base.Save(parentExportIndex, outputPath);
         }
 
-        public LuaFolder(LoadedActor loadedActor)
-            : base(loadedActor)
+        public LuaFolder(SavedActor savedActor)
+            : base(savedActor)
         {
-            if (loadedActor.Export["RootComponent"] is ObjectPropertyData rootComponentProp)
+            if (savedActor.Export["RootComponent"] is ObjectPropertyData rootComponentProp)
             {
-                RootComponent = new LoadedActor(loadedActor.LinkedMap, rootComponentProp.Value);
+                RootComponent = new(savedActor.Map, rootComponentProp.Value);
             }
             else
             {

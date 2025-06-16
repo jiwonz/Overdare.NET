@@ -12,7 +12,7 @@ namespace Overdare.UScriptClass
             get
             {
                 var flags = ClassTagFlags.None;
-                if (SavingActor?.Export["bVisibleInLevelBrowser"] is BoolPropertyData prop && !prop.Value) flags |= ClassTagFlags.NotBrowsable;
+                if (SavedActor?.Export["bVisibleInLevelBrowser"] is BoolPropertyData prop && !prop.Value) flags |= ClassTagFlags.NotBrowsable;
                 if (NotCreatable) flags |= ClassTagFlags.NotCreatable;
                 return flags;
             }
@@ -25,8 +25,8 @@ namespace Overdare.UScriptClass
                 if (_customName?.Length > 0)
                     return _customName;
                 if (
-                    SavingActor is LoadedActor loadedActor
-                    && loadedActor.Export["Name"] is StrPropertyData strProp
+                    SavedActor != null
+                    && SavedActor.Export["Name"] is StrPropertyData strProp
                 )
                 {
                     return strProp.Value.Value;
@@ -109,7 +109,7 @@ namespace Overdare.UScriptClass
         }
 
         // TO-DO: This can be improved by adding a default Export like LuaModel or something.
-        public SavedActor? SavingActor { get; internal set; }
+        public SavedActor? SavedActor { get; internal set; }
 
         /// <summary>
         /// For already saved exports from the current asset.
@@ -139,19 +139,19 @@ namespace Overdare.UScriptClass
                 if (Parent == this)
                     throw new InvalidOperationException("Attempt to set as its own parent.");
 
-                if (SavingActor is LoadedActor loadedActor)
+                if (SavedActor != null)
                 {
                     if (value == null)
                     {
-                        loadedActor.LinkedMap.UnlinkedExportsAndInstances.Add(
-                            loadedActor.ExportIndex,
+                        SavedActor.Map.UnlinkedExportsAndInstances.Add(
+                            SavedActor.ExportIndex,
                             this
                         );
                     }
                     else
                     {
-                        loadedActor.LinkedMap.UnlinkedExportsAndInstances.Remove(
-                            loadedActor.ExportIndex
+                        SavedActor.Map.UnlinkedExportsAndInstances.Remove(
+                            SavedActor.ExportIndex
                         );
                     }
                 }
@@ -194,12 +194,12 @@ namespace Overdare.UScriptClass
             ClassName = "";
         }
 
-        public LuaInstance(LoadedActor loadedActor)
+        public LuaInstance(SavedActor savedActor)
         {
-            SavingActor = loadedActor;
-            Map = loadedActor.LinkedMap;
+            SavedActor = savedActor;
+            Map = savedActor.Map;
             var classType =
-                loadedActor.Export.GetExportClassType()
+                savedActor.Export.GetExportClassType()
                 ?? throw new InvalidOperationException("Export does not have a class type.");
             ClassName =
                 classType.Value?.Value
@@ -216,14 +216,14 @@ namespace Overdare.UScriptClass
                 _ => null,
             };
 
-        public static LuaInstance CreateFromClassName(string className, LoadedActor loadedActor) =>
+        public static LuaInstance CreateFromClassName(string className, SavedActor savedActor) =>
             className switch
             {
-                "LuaFolder" => new LuaFolder(loadedActor),
-                "LuaScript" => new LuaScript(loadedActor),
-                "LuaModuleScript" => new LuaModuleScript(loadedActor),
-                "LuaLocalScript" => new LuaLocalScript(loadedActor),
-                _ => new LuaInstance(loadedActor),
+                "LuaFolder" => new LuaFolder(savedActor),
+                "LuaScript" => new LuaScript(savedActor),
+                "LuaModuleScript" => new LuaModuleScript(savedActor),
+                "LuaLocalScript" => new LuaLocalScript(savedActor),
+                _ => new LuaInstance(savedActor),
             };
 
         internal FName? GetNextName()
@@ -235,9 +235,9 @@ namespace Overdare.UScriptClass
             {
                 newName = Map.GetNextName(_customName);
             }
-            else if (SavingActor is LoadedActor loadedActor)
+            else if (SavedActor != null)
             {
-                var export = loadedActor.Export;
+                var export = SavedActor.Export;
                 if (export["Name"] is StrPropertyData strProp)
                 {
                     newName = strProp.Value == export.ObjectName.Value ? export.ObjectName : null;
@@ -254,20 +254,20 @@ namespace Overdare.UScriptClass
         {
             if (Map == null)
                 throw new InvalidOperationException("Map is required to save a LuaInstance.");
-            if (SavingActor == null)
-            {
-                throw new InvalidOperationException(
-                    "SavingActor is required to save a LuaInstance"
-                );
-            }
 
-            if (SavingActor is LoadedActor loadedActor && loadedActor.LinkedMap != Map)
+            if (SavedActor != null && SavedActor.Map != Map)
             {
                 throw new InvalidOperationException(
-                    "SavingActor is a LoadedActor from a different Map, cannot save LuaInstance."
+                    "SavedActor is saved in a different Map, cannot save LuaInstance."
                 );
             }
-            var export = SavingActor.Export;
+            if (SavedActor == null)
+            {
+                throw new InvalidOperationException(
+                    "SavedActor is required to save a LuaInstance"
+                );
+            }
+            var export = SavedActor.Export;
             var asset = export.Asset;
             // Apply properties Name(ObjectName, Name, ActorName) and Parent (LuaChildren is set later because we need ExportReference which can be set after their .Save() method called)
             var newName = GetNextName();
@@ -294,7 +294,7 @@ namespace Overdare.UScriptClass
                 };
             }
 
-            parentExportIndex = SavingActor.ExportIndex;
+            parentExportIndex = SavedActor.ExportIndex;
 
             var childrenArray = GetChildren();
             var luaChildrenValue = new PropertyData[childrenArray.Length];
@@ -302,7 +302,7 @@ namespace Overdare.UScriptClass
             {
                 var child = childrenArray[i];
                 child.Save(parentExportIndex, outputPath);
-                if (child.SavingActor == null)
+                if (child.SavedActor == null)
                 {
                     throw new InvalidOperationException(
                         "SavingActor is required to save a LuaInstance"
@@ -312,7 +312,7 @@ namespace Overdare.UScriptClass
                 luaChildrenValue[i] = new ObjectPropertyData()
                 {
                     Name = FName.FromString(asset, i.ToString()),
-                    Value = FPackageIndex.FromExport(child.SavingActor.ExportIndex),
+                    Value = FPackageIndex.FromExport(child.SavedActor.ExportIndex),
                 };
             }
             if (childrenArray.Length == 0)
@@ -327,7 +327,7 @@ namespace Overdare.UScriptClass
             }
             else
             {
-                SavingActor.Export["LuaChildren"] = new ArrayPropertyData()
+                SavedActor.Export["LuaChildren"] = new ArrayPropertyData()
                 {
                     Name = FName.FromString(asset, "LuaChildren"),
                     Value = luaChildrenValue,
@@ -337,14 +337,14 @@ namespace Overdare.UScriptClass
 
         internal void Unlink()
         {
-            if (SavingActor == null)
+            if (SavedActor == null)
             {
                 throw new InvalidOperationException(
                     "SavingActor is required to save a LuaInstance"
                 );
             }
 
-            var export = SavingActor.Export;
+            var export = SavedActor.Export;
             var asset = export.Asset;
             for (int i = export.Data.Count - 1; i >= 0; i--)
             {

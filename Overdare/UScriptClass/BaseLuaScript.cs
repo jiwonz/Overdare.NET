@@ -141,6 +141,7 @@ namespace Overdare.UScriptClass
             luaScriptClassName = Map.GetNextName(ClassName);
             NormalExport luaScript = new(asset, [0, 0, 0, 0])
             {
+                Asset = asset,
                 ClassIndex = classIndex,
                 ObjectName = luaScriptClassName,
                 OuterIndex = FPackageIndex.FromExport(Map.LevelPackageIndex),

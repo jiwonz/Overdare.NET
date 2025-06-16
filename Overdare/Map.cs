@@ -135,6 +135,8 @@ namespace Overdare
 
         public void Save(string path)
         {
+            var oldFilePath = Asset.FilePath;
+            Asset.FilePath = path;
             LuaDataModel.Save(null, path);
             foreach (var kv in UnlinkedExportsAndInstances)
             {
@@ -149,6 +151,7 @@ namespace Overdare
                     _level.Actors.RemoveAt(i);
             }
             Asset.Write(path);
+            Asset.FilePath = oldFilePath; // Restore original file path after writing
         }
 
         internal int AddActor(NormalExport export)

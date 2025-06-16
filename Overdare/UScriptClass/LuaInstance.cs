@@ -143,10 +143,13 @@ namespace Overdare.UScriptClass
                 {
                     if (value == null)
                     {
-                        SavedActor.Map.UnlinkedExportsAndInstances.Add(
-                            SavedActor.ExportIndex,
-                            this
-                        );
+                        if (!SavedActor.Map.UnlinkedExportsAndInstances.ContainsKey(SavedActor.ExportIndex))
+                        {
+                            SavedActor.Map.UnlinkedExportsAndInstances.Add(
+                                SavedActor.ExportIndex,
+                                this
+                            );
+                        }
                     }
                     else
                     {

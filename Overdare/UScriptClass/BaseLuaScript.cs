@@ -49,6 +49,38 @@ namespace Overdare.UScriptClass
             asset.Write(Path.ChangeExtension(sourceResources.Path, "uasset"));
         }
 
+        /// <summary>
+        /// Saves the source code(only code) of the Lua script to the file system.
+        /// </summary>
+        /// <exception cref="InvalidOperationException"></exception>
+        public void SaveSource()
+        {
+            if (SavedActor == null)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot save source for {ClassName} without a SavedActor."
+                );
+            }
+            var export = SavedActor.Export;
+            var sourceResources = TryGetSourceResources(export);
+            if (string.IsNullOrEmpty(sourceResources.Path))
+                return;
+
+            if (File.Exists(Path.ChangeExtension(sourceResources.Path, "uasset")))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot save source without a pair of LuaCode .uasset file."
+                );
+            }
+
+            var dir = Path.GetDirectoryName(sourceResources.Path);
+            if (!string.IsNullOrEmpty(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+            File.WriteAllText(sourceResources.Path, Source);
+        }
+
         private readonly Stream? LuaCodeUAssetResource = Assembly
             .GetExecutingAssembly()
             .GetManifestResourceStream("Overdare.Resources.LuaCode.uasset");

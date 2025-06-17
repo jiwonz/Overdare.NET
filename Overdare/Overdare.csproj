@@ -11,14 +11,14 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="UAssetAPI">
-      <HintPath>..\..\UAssetAPI\UAssetAPI\bin\Debug\net8.0\UAssetAPI.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Include="UAssetAPI">
+	    <HintPath>..\..\UAssetAPI\UAssetAPI\bin\Release\net8.0\UAssetAPI.dll</HintPath>
+	  </Reference>
 	</ItemGroup>
 
 </Project>

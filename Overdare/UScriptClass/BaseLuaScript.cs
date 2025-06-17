@@ -66,7 +66,7 @@ namespace Overdare.UScriptClass
             if (string.IsNullOrEmpty(sourceResources.Path))
                 return;
 
-            if (File.Exists(Path.ChangeExtension(sourceResources.Path, "uasset")))
+            if (!File.Exists(Path.ChangeExtension(sourceResources.Path, "uasset")))
             {
                 throw new InvalidOperationException(
                     $"Cannot save source without a pair of LuaCode .uasset file."

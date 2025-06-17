@@ -6,14 +6,19 @@ namespace Overdare.UScriptClass
 {
     public class LuaInstance
     {
-        virtual internal bool NotCreatable => true;
+        internal virtual bool NotCreatable => true;
         public ClassTagFlags ClassTagFlags
         {
             get
             {
                 var flags = ClassTagFlags.None;
-                if (SavedActor?.Export["bVisibleInLevelBrowser"] is BoolPropertyData prop && !prop.Value) flags |= ClassTagFlags.NotBrowsable;
-                if (NotCreatable) flags |= ClassTagFlags.NotCreatable;
+                if (
+                    SavedActor?.Export["bVisibleInLevelBrowser"] is BoolPropertyData prop
+                    && !prop.Value
+                )
+                    flags |= ClassTagFlags.NotBrowsable;
+                if (NotCreatable)
+                    flags |= ClassTagFlags.NotCreatable;
                 return flags;
             }
         }
@@ -24,10 +29,7 @@ namespace Overdare.UScriptClass
             {
                 if (_customName?.Length > 0)
                     return _customName;
-                if (
-                    SavedActor != null
-                    && SavedActor.Export["Name"] is StrPropertyData strProp
-                )
+                if (SavedActor != null && SavedActor.Export["Name"] is StrPropertyData strProp)
                 {
                     return strProp.Value.Value;
                 }
@@ -143,7 +145,11 @@ namespace Overdare.UScriptClass
                 {
                     if (value == null)
                     {
-                        if (!SavedActor.Map.UnlinkedExportsAndInstances.ContainsKey(SavedActor.ExportIndex))
+                        if (
+                            !SavedActor.Map.UnlinkedExportsAndInstances.ContainsKey(
+                                SavedActor.ExportIndex
+                            )
+                        )
                         {
                             SavedActor.Map.UnlinkedExportsAndInstances.Add(
                                 SavedActor.ExportIndex,
@@ -153,9 +159,7 @@ namespace Overdare.UScriptClass
                     }
                     else
                     {
-                        SavedActor.Map.UnlinkedExportsAndInstances.Remove(
-                            SavedActor.ExportIndex
-                        );
+                        SavedActor.Map.UnlinkedExportsAndInstances.Remove(SavedActor.ExportIndex);
                     }
                 }
 
@@ -266,9 +270,7 @@ namespace Overdare.UScriptClass
             }
             if (SavedActor == null)
             {
-                throw new InvalidOperationException(
-                    "SavedActor is required to save a LuaInstance"
-                );
+                throw new InvalidOperationException("SavedActor is required to save a LuaInstance");
             }
             var export = SavedActor.Export;
             var asset = export.Asset;
@@ -308,7 +310,7 @@ namespace Overdare.UScriptClass
                 if (child.SavedActor == null)
                 {
                     throw new InvalidOperationException(
-                        "SavingActor is required to save a LuaInstance"
+                        "SavedActor is required to save a LuaInstance"
                     );
                 }
 

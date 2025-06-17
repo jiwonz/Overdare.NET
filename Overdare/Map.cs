@@ -91,9 +91,8 @@ namespace Overdare
             LuaDataModel = luaDataModel;
         }
 
-        public Map(byte[] buffer) : this(new MemoryStream(buffer))
-        {
-        }
+        public Map(byte[] buffer)
+            : this(new MemoryStream(buffer)) { }
 
         private static UAsset UAssetFromReader(AssetBinaryReader reader, string? filePath)
         {
@@ -101,7 +100,7 @@ namespace Overdare
             {
                 Mappings = null,
                 CustomSerializationFlags = CustomSerializationFlags.None,
-                FilePath = filePath
+                FilePath = filePath,
             };
             asset.SetEngineVersion(SandboxMetadata.UnrealEngineVersion);
             reader.Asset = asset;
@@ -109,17 +108,14 @@ namespace Overdare
             return asset;
         }
 
-        public Map(Stream stream) : this(UAssetFromReader(new AssetBinaryReader(stream), null))
-        {
-        }
+        public Map(Stream stream)
+            : this(UAssetFromReader(new AssetBinaryReader(stream), null)) { }
 
-        public Map(byte[] buffer, string filePath) : this(new MemoryStream(buffer), filePath)
-        {
-        }
+        public Map(byte[] buffer, string filePath)
+            : this(new MemoryStream(buffer), filePath) { }
 
-        public Map(Stream stream, string filePath) : this(UAssetFromReader(new AssetBinaryReader(stream), filePath))
-        {
-        }
+        public Map(Stream stream, string filePath)
+            : this(UAssetFromReader(new AssetBinaryReader(stream), filePath)) { }
 
         public static Map Open(string path)
         {

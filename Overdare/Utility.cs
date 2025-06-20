@@ -10,13 +10,27 @@ namespace Overdare
             int n = 0;
             foreach (var export in asset.Exports)
             {
-                if (export.ObjectName.Value.Value == baseName)
+                if (
+                    export.ObjectName.Value.Value.Equals(
+                        baseName,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
                     n++;
+                }
             }
             foreach (var import in asset.Imports)
             {
-                if (import.ObjectName.Value.Value == baseName)
+                if (
+                    import.ObjectName.Value.Value.Equals(
+                        baseName,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
                     n++;
+                }
             }
             return new FName(asset, baseName, n);
         }

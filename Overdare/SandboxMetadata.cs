@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UAssetAPI;
 
 namespace Overdare
 {
@@ -59,6 +60,7 @@ namespace Overdare
                 var installLocation =
                     (manifest["InstallLocation"]?.ToString())
                     ?? throw new KeyNotFoundException("Install location not found in manifest.");
+                installLocation = installLocation.FixDirectorySeparatorsForDisk();
                 var launchExecutable =
                     (manifest["LaunchExecutable"]?.ToString())
                     ?? throw new KeyNotFoundException("Launch executable not found in manifest.");

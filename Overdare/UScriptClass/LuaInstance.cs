@@ -237,22 +237,23 @@ namespace Overdare.UScriptClass
         {
             if (Map == null)
                 throw new InvalidOperationException("Map is required to get a next FName.");
+            if (SavedActor != null) return null;
             FName? newName = null;
             if (_customName?.Length > 0)
             {
                 newName = Map.GetNextName(_customName);
-            }
-            else if (SavedActor != null)
-            {
-                var export = SavedActor.Export;
-                if (export["Name"] is StrPropertyData strProp)
-                {
-                    newName = strProp.Value == export.ObjectName.Value ? export.ObjectName : null;
-                }
-                else
-                {
-                    newName = null;
-                }
+            //}
+            //else if (SavedActor != null)
+            //{
+            //    var export = SavedActor.Export;
+            //    if (export["Name"] is StrPropertyData strProp)
+            //    {
+            //        newName = strProp.Value == export.ObjectName.Value ? export.ObjectName : null;
+            //    }
+            //    else
+            //    {
+            //        newName = null;
+            //    }
             }
             return newName;
         }

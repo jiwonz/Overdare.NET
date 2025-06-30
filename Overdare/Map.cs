@@ -13,6 +13,7 @@ namespace Overdare
         internal Dictionary<int, LuaInstance> UnlinkedExportsAndInstances = [];
         internal int LevelPackageIndex;
         private readonly LevelExport _level;
+        private Dictionary<string, int> _nextFNameNumberIndexMap = [];
 
         private LuaInstance? TryLoadLuaDataModel()
         {
@@ -158,9 +159,79 @@ namespace Overdare
             return parentPackageIndex.Index - 1;
         }
 
+        private bool IsDuplicated(string name, int number)
+        {
+            foreach (var export in Asset.Exports)
+            {
+                if (
+                    export.ObjectName.Value.Value.Equals(
+                        name,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    && export.ObjectName.Number == number
+                )
+                {
+                    return true;
+                }
+            }
+            foreach (var import in Asset.Imports)
+            {
+                if (
+                    import.ObjectName.Value.Value.Equals(
+                        name,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    && import.ObjectName.Number == number
+                )
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public FName GetNextName(string baseName)
         {
-            return Utility.GetNextName(Asset, baseName);
+            var nameForSearch = baseName.ToLower();
+            if (_nextFNameNumberIndexMap.TryGetValue(nameForSearch, out int nextIndex))
+            {
+                while (IsDuplicated(baseName, nextIndex))
+                {
+                    nextIndex++;
+                }
+                _nextFNameNumberIndexMap[nameForSearch] = nextIndex + 1;
+            }
+            else
+            {
+                int n = 0;
+                foreach (var export in Asset.Exports)
+                {
+                    if (
+                        export.ObjectName.Value.Value.Equals(
+                            nameForSearch,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                    {
+                        n++;
+                    }
+                }
+                foreach (var import in Asset.Imports)
+                {
+                    if (
+                        import.ObjectName.Value.Value.Equals(
+                            nameForSearch,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                    {
+                        n++;
+                    }
+                }
+                nextIndex = n;
+                _nextFNameNumberIndexMap[nameForSearch] = n + 1;
+            }
+            return new FName(Asset, baseName, nextIndex);
         }
     }
 }

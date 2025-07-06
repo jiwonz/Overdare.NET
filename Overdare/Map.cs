@@ -13,7 +13,6 @@ namespace Overdare
         internal Dictionary<int, LuaInstance> UnlinkedExportsAndInstances = [];
         internal int LevelPackageIndex;
         private readonly LevelExport _level;
-        private Dictionary<string, int> _nextFNameNumberIndexMap = [];
 
         private LuaInstance? TryLoadLuaDataModel()
         {
@@ -159,78 +158,47 @@ namespace Overdare
             return parentPackageIndex.Index - 1;
         }
 
-        private bool IsDuplicated(string name, int number)
+        public FName GetNextName(string baseName)
         {
+            // Find the lowest unused number for the given baseName (case-insensitive)
+            // If 0 is unused, return FName(baseName, 0) which is just 'baseName' (no suffix)
+            // Else, return FName(baseName, n) where n is the lowest unused positive integer
+
+            // Build a HashSet of all used numbers for this baseName
+            var usedNumbers = new HashSet<int>();
+
             foreach (var export in Asset.Exports)
             {
                 if (
                     export.ObjectName.Value.Value.Equals(
-                        name,
+                        baseName,
                         StringComparison.OrdinalIgnoreCase
                     )
-                    && export.ObjectName.Number == number
                 )
                 {
-                    return true;
+                    usedNumbers.Add(export.ObjectName.Number);
                 }
             }
             foreach (var import in Asset.Imports)
             {
                 if (
                     import.ObjectName.Value.Value.Equals(
-                        name,
+                        baseName,
                         StringComparison.OrdinalIgnoreCase
                     )
-                    && import.ObjectName.Number == number
                 )
                 {
-                    return true;
+                    usedNumbers.Add(import.ObjectName.Number);
                 }
             }
-            return false;
-        }
 
-        public FName GetNextName(string baseName)
-        {
-            var nameForSearch = baseName.ToLower();
-            if (_nextFNameNumberIndexMap.TryGetValue(nameForSearch, out int nextIndex))
+            // Find the lowest unused number, starting at 0
+            int nextIndex = 0;
+            while (usedNumbers.Contains(nextIndex))
             {
-                while (IsDuplicated(baseName, nextIndex))
-                {
-                    nextIndex++;
-                }
-                _nextFNameNumberIndexMap[nameForSearch] = nextIndex + 1;
+                nextIndex++;
             }
-            else
-            {
-                int n = 0;
-                foreach (var export in Asset.Exports)
-                {
-                    if (
-                        export.ObjectName.Value.Value.Equals(
-                            nameForSearch,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    )
-                    {
-                        n++;
-                    }
-                }
-                foreach (var import in Asset.Imports)
-                {
-                    if (
-                        import.ObjectName.Value.Value.Equals(
-                            nameForSearch,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    )
-                    {
-                        n++;
-                    }
-                }
-                nextIndex = n;
-                _nextFNameNumberIndexMap[nameForSearch] = n + 1;
-            }
+
             return new FName(Asset, baseName, nextIndex);
         }
     }
